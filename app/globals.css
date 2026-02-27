@@ -1,26 +1,89 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-fumi-bg: #FAF8F5;
+  --color-fumi-bg-warm: #F5F0EB;
+  --color-fumi-card: #FFFFFF;
+  --color-fumi-text: #1A1A1A;
+  --color-fumi-text-secondary: #7A7267;
+  --color-fumi-text-muted: #B5ADA3;
+  --color-fumi-accent: #C4703F;
+  --color-fumi-accent-soft: #E8D5C4;
+  --color-fumi-border: #EBE6DF;
+  --color-fumi-ai-bg: #F0EDE8;
+  --color-fumi-success: #7A9E7E;
+
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "DM Sans", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::placeholder {
+  color: #B5ADA3;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #FAF8F5;
+  color: #1A1A1A;
+  font-family: "DM Sans", sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+@keyframes pulse-recording {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes fade-dots {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* PWA standalone safe area support */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-area-top { padding-top: env(safe-area-inset-top); }
+  .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Prevent text selection on interactive elements for mobile feel */
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+/* Smooth scrolling */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbars for a cleaner mobile look */
+.overflow-y-auto::-webkit-scrollbar {
+  display: none;
+}
+.overflow-y-auto {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
