@@ -101,6 +101,15 @@ export const strings = {
       linkSentSubtitle: "We sent you a login link. It may take a minute.",
       logout: "Log out",
     },
+    settings: {
+      title: "Settings",
+      babyNameLabel: "Baby's name",
+      birthDateLabel: "Date of birth",
+      languageLabel: "Language",
+      saveButton: "Save changes",
+      saved: "Saved!",
+      logoutButton: "Log out",
+    },
     book: {
       bookOf: "the book of",
       voiceLabel: "Voice",
@@ -216,6 +225,15 @@ export const strings = {
       linkSent: "¡Revisá tu email!",
       linkSentSubtitle: "Te enviamos un link para entrar. Puede tardar un minuto.",
       logout: "Cerrar sesión",
+    },
+    settings: {
+      title: "Ajustes",
+      babyNameLabel: "Nombre del bebé",
+      birthDateLabel: "Fecha de nacimiento",
+      languageLabel: "Idioma",
+      saveButton: "Guardar cambios",
+      saved: "¡Guardado!",
+      logoutButton: "Cerrar sesión",
     },
     book: {
       bookOf: "el libro de",

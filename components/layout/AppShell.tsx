@@ -1,21 +1,26 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import NavBar from "./NavBar";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+
   return (
     <div className="w-full max-w-[390px] h-dvh mx-auto bg-fumi-bg relative flex flex-col">
-      {/* Status bar */}
-      <div className="flex justify-between items-center px-6 pt-3 safe-area-top shrink-0">
-        <span className="font-[family-name:var(--font-dm-sans)] text-[11px] font-semibold text-fumi-text">
-          9:41
-        </span>
+      {/* Top bar */}
+      <div className="flex justify-between items-center px-6 pt-3 pb-1 safe-area-top shrink-0">
+        <div className="w-8" />
         <span className="font-[family-name:var(--font-playfair)] text-[15px] text-fumi-accent font-medium italic">
           fumi.
         </span>
-        <span className="font-[family-name:var(--font-dm-sans)] text-[11px] text-fumi-text">
-          ●●●●
-        </span>
+        <button
+          onClick={() => router.push("/settings")}
+          className="w-8 h-8 flex items-center justify-center bg-transparent border-none cursor-pointer text-fumi-text-muted text-[18px]"
+          aria-label="Settings"
+        >
+          ⚙
+        </button>
       </div>
 
       {/* Content */}
