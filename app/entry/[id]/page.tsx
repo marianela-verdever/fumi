@@ -8,6 +8,7 @@ import type { Tag, Entry, Baby } from "@/lib/types";
 import { getTodayISO, formatDate } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
 import { rowToEntry } from "@/lib/supabase/types";
+import { uploadEntryMedia } from "@/lib/supabase/storage";
 import { useLang } from "@/lib/lang-context";
 
 const allTags: Tag[] = ["primera vez", "milestone", "gracioso", "familia", "salud"];
@@ -30,6 +31,12 @@ export default function EditEntryPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Photo state
+  const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [newPreviews, setNewPreviews] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   // Load entry from Supabase
@@ -48,6 +55,7 @@ export default function EditEntryPage() {
           setDate(e.date);
           setText(e.content);
           setSelectedTags(e.tags);
+          setExistingPhotos(e.mediaUrls ?? []);
         }
         setIsLoading(false);
       });
@@ -59,10 +67,60 @@ export default function EditEntryPage() {
     );
   };
 
+  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    setNewFiles((prev) => [...prev, ...files]);
+    const previews = files.map((f) => URL.createObjectURL(f));
+    setNewPreviews((prev) => [...prev, ...previews]);
+    e.target.value = "";
+  };
+
+  const removeExistingPhoto = (index: number) => {
+    setExistingPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNewPhoto = (index: number) => {
+    URL.revokeObjectURL(newPreviews[index]);
+    setNewFiles((prev) => prev.filter((_, i) => i !== index));
+    setNewPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const totalPhotos = existingPhotos.length + newPreviews.length;
+
   const handleSave = async () => {
-    if (!text.trim()) return;
+    if (!text.trim() && totalPhotos === 0 && newFiles.length === 0) return;
     setSaving(true);
     setSaveError("");
+
+    const stored = localStorage.getItem("fumi_baby");
+    if (!stored) { setSaving(false); return; }
+    const baby: Baby = JSON.parse(stored);
+
+    // Upload new photos
+    let uploadedUrls: string[] = [];
+    if (newFiles.length > 0) {
+      try {
+        uploadedUrls = await Promise.all(
+          newFiles.map((f) => uploadEntryMedia(f, baby.id))
+        );
+      } catch {
+        setSaveError(
+          lang === "en"
+            ? "Could not upload photos. Try again."
+            : "No se pudieron subir las fotos. Intentá de nuevo."
+        );
+        setSaving(false);
+        return;
+      }
+    }
+
+    const allMediaUrls = [...existingPhotos, ...uploadedUrls];
+
+    // Determine entry type
+    const hasPhotos = allMediaUrls.length > 0;
+    const hasText = !!text.trim();
+    const entryType = hasPhotos && hasText ? "mixed" : hasPhotos ? "photo" : "text";
 
     const { error } = await supabase
       .from("entries")
@@ -70,6 +128,8 @@ export default function EditEntryPage() {
         date,
         content: text.trim(),
         tags: selectedTags,
+        media_urls: allMediaUrls,
+        type: entryType,
       })
       .eq("id", entryId);
 
@@ -163,38 +223,87 @@ export default function EditEntryPage() {
       />
 
       <div className="px-6 pt-4 flex flex-col gap-4">
-        {/* Photos */}
-        {entry.mediaUrls.length > 0 && (
+        {/* Photos — existing + new + add button */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic"
+          multiple
+          onChange={handleFiles}
+          className="hidden"
+        />
+
+        {totalPhotos === 0 ? (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full h-[100px] border-2 border-dashed border-fumi-border rounded-[14px] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-fumi-accent-soft transition-colors bg-transparent"
+          >
+            <span className="text-[28px] text-fumi-text-muted">⊕</span>
+            <span className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-muted">
+              {t.add.addMedia}
+            </span>
+          </button>
+        ) : (
           <div className="flex gap-2 flex-wrap">
-            {entry.mediaUrls.map((url, i) => (
-              <div key={i} className="w-[100px] h-[100px] rounded-[10px] overflow-hidden">
-                <img
-                  src={url}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+            {/* Existing photos */}
+            {existingPhotos.map((url, i) => (
+              <div key={`existing-${i}`} className="relative w-[80px] h-[80px] rounded-[10px] overflow-hidden">
+                <img src={url} alt="" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeExistingPhoto(i)}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white text-[11px] flex items-center justify-center border-none cursor-pointer leading-none"
+                >
+                  ✕
+                </button>
               </div>
             ))}
+            {/* New photos (previews) */}
+            {newPreviews.map((src, i) => (
+              <div key={`new-${i}`} className="relative w-[80px] h-[80px] rounded-[10px] overflow-hidden">
+                <img src={src} alt="" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeNewPhoto(i)}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white text-[11px] flex items-center justify-center border-none cursor-pointer leading-none"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            {/* Add more button */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-[80px] h-[80px] rounded-[10px] border-2 border-dashed border-fumi-border flex items-center justify-center cursor-pointer hover:border-fumi-accent-soft transition-colors bg-transparent"
+            >
+              <span className="text-[20px] text-fumi-text-muted">+</span>
+            </button>
           </div>
         )}
 
-        {/* Date picker */}
+        {/* Date picker — works on both desktop (showPicker) and mobile (tap on input) */}
         <div className="relative inline-flex">
-          <div className="flex items-center gap-2 bg-fumi-bg-warm rounded-[10px] px-3.5 py-2.5">
+          <button
+            type="button"
+            onClick={() => dateInputRef.current?.showPicker?.()}
+            className="flex items-center gap-2 bg-fumi-bg-warm rounded-[10px] px-3.5 py-2.5 border-none cursor-pointer"
+          >
             <span className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary">
               {date === getTodayISO()
                 ? `${t.add.today}, ${formatDate(date)}`
                 : formatDate(date)}
             </span>
             <span className="text-[12px] text-fumi-text-muted">✎</span>
-          </div>
+          </button>
           <input
             ref={dateInputRef}
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             max={getTodayISO()}
-            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
           />
         </div>
 
@@ -233,7 +342,7 @@ export default function EditEntryPage() {
         {/* Save button */}
         <button
           onClick={handleSave}
-          disabled={!text.trim() || saving}
+          disabled={(!text.trim() && totalPhotos === 0) || saving}
           className="w-full bg-fumi-accent text-white border-none rounded-[12px] py-4 font-[family-name:var(--font-dm-sans)] text-[15px] font-medium cursor-pointer mt-1 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
         >
           {saving ? "..." : t.editEntry.updateButton}

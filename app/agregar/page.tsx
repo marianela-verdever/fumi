@@ -163,23 +163,27 @@ export default function AgregarPage() {
       <Header title={t.add.title} subtitle={t.add.subtitle} />
 
       <div className="px-6 pt-4 flex flex-col gap-4">
-        {/* Date picker */}
+        {/* Date picker — works on both desktop (showPicker) and mobile (tap on input) */}
         <div className="relative inline-flex">
-          <div className="flex items-center gap-2 bg-fumi-bg-warm rounded-[10px] px-3.5 py-2.5">
+          <button
+            type="button"
+            onClick={() => dateInputRef.current?.showPicker?.()}
+            className="flex items-center gap-2 bg-fumi-bg-warm rounded-[10px] px-3.5 py-2.5 border-none cursor-pointer"
+          >
             <span className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary">
               {date === getTodayISO()
                 ? `${t.add.today}, ${formatDate(date)}`
                 : formatDate(date)}
             </span>
             <span className="text-[12px] text-fumi-text-muted">✎</span>
-          </div>
+          </button>
           <input
             ref={dateInputRef}
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             max={getTodayISO()}
-            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
           />
         </div>
 

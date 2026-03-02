@@ -65,6 +65,7 @@ export default function CapitulosPage() {
           entries: monthEntries.map((e) => ({
             date: e.date,
             content: e.content,
+            type: e.type,
             tags: e.tags,
           })),
           voice: "baby",
