@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getTodayISO } from "@/lib/utils";
 import { useLang } from "@/lib/lang-context";
+import { useAuth } from "@/lib/auth-context";
 import type { Lang } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase/client";
 import { rowToBaby } from "@/lib/supabase/types";
@@ -11,6 +12,7 @@ import { rowToBaby } from "@/lib/supabase/types";
 export default function OnboardingPage() {
   const router = useRouter();
   const { lang, setLang, t } = useLang();
+  const { user } = useAuth();
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,7 +27,7 @@ export default function OnboardingPage() {
     // 1. Insert baby
     const { data: babyData, error: babyErr } = await supabase
       .from("babies")
-      .insert({ name: name.trim(), birth_date: birthDate })
+      .insert({ name: name.trim(), birth_date: birthDate, user_id: user?.id ?? null })
       .select()
       .single();
 

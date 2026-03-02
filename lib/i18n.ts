@@ -92,6 +92,15 @@ export const strings = {
       deleteButton: "Delete moment",
       deleteConfirm: "Are you sure you want to delete this moment?",
     },
+    login: {
+      title: "Sign in",
+      subtitle: "Enter your email to receive a login link.",
+      emailPlaceholder: "your@email.com",
+      sendLink: "Send link",
+      linkSent: "Check your email!",
+      linkSentSubtitle: "We sent you a login link. It may take a minute.",
+      logout: "Log out",
+    },
     book: {
       bookOf: "the book of",
       voiceLabel: "Voice",
@@ -198,6 +207,15 @@ export const strings = {
       updateButton: "Guardar cambios",
       deleteButton: "Eliminar momento",
       deleteConfirm: "¿Segura que querés eliminar este momento?",
+    },
+    login: {
+      title: "Iniciá sesión",
+      subtitle: "Ingresá tu email para recibir un link.",
+      emailPlaceholder: "tu@email.com",
+      sendLink: "Enviar link",
+      linkSent: "¡Revisá tu email!",
+      linkSentSubtitle: "Te enviamos un link para entrar. Puede tardar un minuto.",
+      logout: "Cerrar sesión",
     },
     book: {
       bookOf: "el libro de",

@@ -8,9 +8,18 @@ import { calculateAge, formatDate } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
 import { rowToEntry } from "@/lib/supabase/types";
 import { useLang } from "@/lib/lang-context";
+import { useAuth } from "@/lib/auth-context";
 
 function BabyHeader({ baby }: { baby: Baby }) {
   const { t } = useLang();
+  const { signOut } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut();
+    router.replace("/login");
+  };
+
   return (
     <div className="px-6 pt-5 pb-4 flex justify-between items-start">
       <div>
@@ -21,10 +30,18 @@ function BabyHeader({ baby }: { baby: Baby }) {
           {baby.name}
         </h1>
       </div>
-      <div className="bg-fumi-accent-soft rounded-[20px] px-3.5 py-1.5 mt-2">
-        <span className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-accent font-medium">
-          {calculateAge(baby.birthDate)}
-        </span>
+      <div className="flex flex-col items-end gap-1.5 mt-2">
+        <div className="bg-fumi-accent-soft rounded-[20px] px-3.5 py-1.5">
+          <span className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-accent font-medium">
+            {calculateAge(baby.birthDate)}
+          </span>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="font-[family-name:var(--font-dm-sans)] text-[11px] text-fumi-text-muted bg-transparent border-none cursor-pointer px-1"
+        >
+          {t.login.logout}
+        </button>
       </div>
     </div>
   );
