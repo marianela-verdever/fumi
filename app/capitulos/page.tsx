@@ -4,34 +4,102 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import Header from "@/components/layout/Header";
-import type { Chapter, Baby } from "@/lib/types";
+import type { Chapter, Baby, Entry } from "@/lib/types";
 import { supabase } from "@/lib/supabase/client";
-import { rowToChapter } from "@/lib/supabase/types";
+import { rowToChapter, rowToEntry } from "@/lib/supabase/types";
 import { useLang } from "@/lib/lang-context";
+import { getTotalMonths, getMonthNumber, getMonthPeriod } from "@/lib/utils";
 
 export default function CapitulosPage() {
   const router = useRouter();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [baby, setBaby] = useState<Baby | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [creatingMonth, setCreatingMonth] = useState<number | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("fumi_baby");
     if (!stored) return;
-    const baby: Baby = JSON.parse(stored);
+    const babyObj: Baby = JSON.parse(stored);
+    setBaby(babyObj);
 
-    supabase
-      .from("chapters")
-      .select("*")
-      .eq("baby_id", baby.id)
-      .order("month")
-      .then(({ data, error }) => {
-        if (!error && data) {
-          setChapters(data.map(rowToChapter));
-        }
-        setIsLoading(false);
-      });
+    // Fetch chapters + entries in parallel
+    Promise.all([
+      supabase
+        .from("chapters")
+        .select("*")
+        .eq("baby_id", babyObj.id)
+        .order("month"),
+      supabase
+        .from("entries")
+        .select("*")
+        .eq("baby_id", babyObj.id)
+        .order("date", { ascending: false }),
+    ]).then(([chaptersRes, entriesRes]) => {
+      if (!chaptersRes.error && chaptersRes.data) {
+        setChapters(chaptersRes.data.map(rowToChapter));
+      }
+      if (!entriesRes.error && entriesRes.data) {
+        setEntries(entriesRes.data.map(rowToEntry));
+      }
+      setIsLoading(false);
+    });
   }, []);
+
+  const handleCreateChapter = async (month: number) => {
+    if (!baby || creatingMonth !== null) return;
+    setCreatingMonth(month);
+
+    const monthEntries = entries.filter(
+      (e) => getMonthNumber(e.date, baby.birthDate) === month
+    );
+
+    try {
+      // Call the generate API
+      const res = await fetch("/api/chapters/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          entries: monthEntries.map((e) => ({
+            date: e.date,
+            content: e.content,
+            tags: e.tags,
+          })),
+          voice: "baby",
+          month,
+          babyName: baby.name,
+          lang,
+        }),
+      });
+      const data = await res.json();
+
+      // Insert chapter into Supabase
+      const { data: chapterData, error } = await supabase
+        .from("chapters")
+        .insert({
+          baby_id: baby.id,
+          month,
+          period: getMonthPeriod(month, baby.birthDate),
+          status: monthEntries.length > 0 ? "draft" : "collecting",
+          voice: "baby",
+          generated_content: data.content,
+          own_text_blocks: [],
+          entry_ids: monthEntries.map((e) => e.id),
+        })
+        .select()
+        .single();
+
+      if (!error && chapterData) {
+        router.push(`/capitulos/${chapterData.id}`);
+      }
+    } catch {
+      console.error("Failed to create chapter");
+    } finally {
+      setCreatingMonth(null);
+    }
+  };
 
   const statusMap = {
     approved: {
@@ -50,6 +118,25 @@ export default function CapitulosPage() {
       bg: "bg-fumi-bg-warm",
     },
   };
+
+  // Build month slots
+  const totalMonths = baby ? getTotalMonths(baby.birthDate) : 0;
+
+  // Group entries by month
+  const entriesByMonth: Record<number, Entry[]> = {};
+  if (baby) {
+    entries.forEach((entry) => {
+      const m = getMonthNumber(entry.date, baby.birthDate);
+      if (!entriesByMonth[m]) entriesByMonth[m] = [];
+      entriesByMonth[m].push(entry);
+    });
+  }
+
+  // Map chapters by month for quick lookup
+  const chapterByMonth: Record<number, Chapter> = {};
+  chapters.forEach((ch) => {
+    chapterByMonth[ch.month] = ch;
+  });
 
   return (
     <AppShell>
@@ -70,34 +157,86 @@ export default function CapitulosPage() {
               <div className="h-6 w-20 bg-fumi-border rounded-full" />
             </div>
           ))
-        ) : chapters.length === 0 ? (
+        ) : totalMonths === 0 ? (
           <p className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-muted text-center py-8">
             {t.chapters.statusCollecting}…
           </p>
         ) : (
-          chapters.map((ch) => {
-            const status = statusMap[ch.status] ?? statusMap.collecting;
+          Array.from({ length: totalMonths }, (_, i) => i + 1).map((month) => {
+            const chapter = chapterByMonth[month];
+            const monthEntries = entriesByMonth[month] ?? [];
+            const entryCount = monthEntries.length;
 
+            // State 1: Has chapter — clickable card to editor
+            if (chapter) {
+              const status = statusMap[chapter.status] ?? statusMap.collecting;
+              return (
+                <button
+                  key={month}
+                  onClick={() => router.push(`/capitulos/${chapter.id}`)}
+                  className="p-4 bg-white rounded-[12px] border border-fumi-border flex items-center justify-between cursor-pointer text-left w-full hover:border-fumi-accent-soft transition-colors"
+                >
+                  <div>
+                    <p className="font-[family-name:var(--font-playfair)] text-[16px] text-fumi-text m-0 font-medium">
+                      {t.chapters.monthPrefix} {month}
+                    </p>
+                    <p className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-muted m-0 mt-0.5">
+                      {chapter.period} · {chapter.entryIds.length}{" "}
+                      {t.chapters.entriesSuffix}
+                    </p>
+                  </div>
+                  <span
+                    className={`font-[family-name:var(--font-dm-sans)] text-[11px] px-3 py-1 rounded-[20px] ${status.color} ${status.bg}`}
+                  >
+                    {status.label}
+                  </span>
+                </button>
+              );
+            }
+
+            // State 2: Has entries but no chapter — "Create chapter" button
+            if (entryCount > 0) {
+              return (
+                <div
+                  key={month}
+                  className="p-4 bg-white rounded-[12px] border border-fumi-border flex items-center justify-between"
+                >
+                  <div>
+                    <p className="font-[family-name:var(--font-playfair)] text-[16px] text-fumi-text m-0 font-medium">
+                      {t.chapters.monthPrefix} {month}
+                    </p>
+                    <p className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-muted m-0 mt-0.5">
+                      {entryCount} {t.chapters.entriesReady}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleCreateChapter(month)}
+                    disabled={creatingMonth !== null}
+                    className="font-[family-name:var(--font-dm-sans)] text-[12px] px-3.5 py-1.5 rounded-[20px] bg-fumi-accent text-white border-none cursor-pointer disabled:opacity-50 transition-opacity"
+                  >
+                    {creatingMonth === month
+                      ? t.chapters.generating
+                      : t.chapters.createChapter}
+                  </button>
+                </div>
+              );
+            }
+
+            // State 3: No entries, no chapter — dimmed
             return (
-              <button
-                key={ch.id}
-                onClick={() => router.push(`/capitulos/${ch.id}`)}
-                className="p-4 bg-white rounded-[12px] border border-fumi-border flex items-center justify-between cursor-pointer text-left w-full hover:border-fumi-accent-soft transition-colors"
+              <div
+                key={month}
+                className="p-4 bg-fumi-bg-warm rounded-[12px] border border-fumi-border/50 flex items-center justify-between opacity-60"
               >
                 <div>
-                  <p className="font-[family-name:var(--font-playfair)] text-[16px] text-fumi-text m-0 font-medium">
-                    {t.chapters.monthPrefix} {ch.month}
+                  <p className="font-[family-name:var(--font-playfair)] text-[16px] text-fumi-text-muted m-0 font-medium">
+                    {t.chapters.monthPrefix} {month}
                   </p>
                   <p className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-muted m-0 mt-0.5">
-                    {ch.period} · {ch.entryIds.length} {t.chapters.entriesSuffix}
+                    {t.chapters.noEntriesYet}
                   </p>
                 </div>
-                <span
-                  className={`font-[family-name:var(--font-dm-sans)] text-[11px] px-3 py-1 rounded-[20px] ${status.color} ${status.bg}`}
-                >
-                  {status.label}
-                </span>
-              </button>
+              </div>
             );
           })
         )}

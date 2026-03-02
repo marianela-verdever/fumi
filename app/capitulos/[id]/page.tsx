@@ -410,13 +410,30 @@ export default function ChapterEditorPage() {
       </div>
 
       {/* Status indicator */}
-      <div className="mx-6 mb-4 px-3.5 py-2.5 bg-fumi-success/10 rounded-[10px] flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-fumi-success" />
-        <span className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-success">
-          {ce.draftGenerated} · {chapter.entryIds.length} {ce.entriesSuffix} ·{" "}
-          {ce.voiceSuffix}: {voices.find((v) => v.id === voice)?.label}
-        </span>
-      </div>
+      {chapter.status === "collecting" ? (
+        <div className="mx-6 mb-4 px-3.5 py-2.5 bg-fumi-bg-warm rounded-[10px] flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-fumi-text-muted" />
+          <span className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-muted">
+            {lang === "en" ? "Collecting entries..." : "Recopilando entradas..."}
+          </span>
+        </div>
+      ) : chapter.status === "approved" ? (
+        <div className="mx-6 mb-4 px-3.5 py-2.5 bg-fumi-success/10 rounded-[10px] flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-fumi-success" />
+          <span className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-success">
+            {lang === "en" ? "Approved" : "Aprobado"} · {chapter.entryIds.length} {ce.entriesSuffix} ·{" "}
+            {ce.voiceSuffix}: {voices.find((v) => v.id === voice)?.label}
+          </span>
+        </div>
+      ) : (
+        <div className="mx-6 mb-4 px-3.5 py-2.5 bg-fumi-accent/10 rounded-[10px] flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-fumi-accent" />
+          <span className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-accent">
+            {ce.draftGenerated} · {chapter.entryIds.length} {ce.entriesSuffix} ·{" "}
+            {ce.voiceSuffix}: {voices.find((v) => v.id === voice)?.label}
+          </span>
+        </div>
+      )}
 
       {/* Chapter content */}
       <div className="mx-6 p-5 bg-white rounded-[14px] border border-fumi-border mb-3 relative">

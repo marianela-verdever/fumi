@@ -66,3 +66,26 @@ export function getMonthPeriod(month: number, birthDate: string): string {
   if (startLabel === endLabel) return startLabel;
   return `${startLabel} — ${endLabel}`;
 }
+
+/** Given an entry date and birth date, returns which month of baby's life (1-based). */
+export function getMonthNumber(date: string, birthDate: string): number {
+  const d = new Date(date);
+  const b = new Date(birthDate);
+  const months = (d.getFullYear() - b.getFullYear()) * 12 + (d.getMonth() - b.getMonth());
+  // If the day is before the birth day in the month, it's the previous month
+  if (d.getDate() < b.getDate()) {
+    return Math.max(1, months);
+  }
+  return Math.max(1, months + 1);
+}
+
+/** Returns how many months old the baby is (from birth to today). */
+export function getTotalMonths(birthDate: string): number {
+  const now = new Date();
+  const b = new Date(birthDate);
+  const months = (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth());
+  if (now.getDate() < b.getDate()) {
+    return Math.max(1, months);
+  }
+  return Math.max(1, months + 1);
+}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import Header from "@/components/layout/Header";
 import type { Tag } from "@/lib/types";
-import { getTodayISO, formatDate } from "@/lib/utils";
+import { getTodayISO, formatDate, getMonthNumber } from "@/lib/utils";
 import { placeholders, placeholdersEN } from "@/lib/sample-data";
 import { useLang } from "@/lib/lang-context";
 import { supabase } from "@/lib/supabase/client";
@@ -76,19 +76,40 @@ export default function AgregarPage() {
     setSaving(true);
     setSaveError("");
 
-    const { error } = await supabase.from("entries").insert({
-      baby_id: baby.id,
-      date,
-      type: transcription ? "audio" : "text",
-      content: content.trim(),
-      media_urls: [],
-      tags: selectedTags,
-    });
+    const { data: entryData, error } = await supabase
+      .from("entries")
+      .insert({
+        baby_id: baby.id,
+        date,
+        type: transcription ? "audio" : "text",
+        content: content.trim(),
+        media_urls: [],
+        tags: selectedTags,
+      })
+      .select()
+      .single();
 
-    if (error) {
+    if (error || !entryData) {
       setSaveError(lang === "en" ? "Could not save. Try again." : "No se pudo guardar. Intentá de nuevo.");
       setSaving(false);
       return;
+    }
+
+    // Link entry to chapter if one exists for this month
+    const month = getMonthNumber(date, baby.birthDate);
+    const { data: chapterData } = await supabase
+      .from("chapters")
+      .select("id, entry_ids")
+      .eq("baby_id", baby.id)
+      .eq("month", month)
+      .single();
+
+    if (chapterData) {
+      const updatedIds = [...(chapterData.entry_ids ?? []), entryData.id];
+      await supabase
+        .from("chapters")
+        .update({ entry_ids: updatedIds })
+        .eq("id", chapterData.id);
     }
 
     router.push("/timeline");

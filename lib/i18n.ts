@@ -53,6 +53,10 @@ export const strings = {
       statusApproved: "Approved",
       statusDraft: "Draft",
       statusCollecting: "Collecting",
+      entriesReady: "entries ready",
+      createChapter: "Create chapter",
+      generating: "Generating...",
+      noEntriesYet: "No entries yet",
     },
     chapterEditor: {
       voiceLabel: "Story voice",
@@ -150,6 +154,10 @@ export const strings = {
       statusApproved: "Aprobado",
       statusDraft: "Borrador",
       statusCollecting: "Recopilando",
+      entriesReady: "entradas listas",
+      createChapter: "Crear capítulo",
+      generating: "Generando...",
+      noEntriesYet: "Sin entradas aún",
     },
     chapterEditor: {
       voiceLabel: "Voz del relato",
