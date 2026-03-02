@@ -16,10 +16,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </span>
         <button
           onClick={() => router.push("/settings")}
-          className="w-8 h-8 flex items-center justify-center bg-transparent border-none cursor-pointer text-fumi-text-muted text-[18px]"
+          className="w-8 h-8 flex flex-col items-center justify-center gap-[3.5px] bg-transparent border-none cursor-pointer"
           aria-label="Settings"
         >
-          ⚙
+          <span className="block w-[14px] h-[1.5px] bg-fumi-text-muted rounded-full" />
+          <span className="block w-[14px] h-[1.5px] bg-fumi-text-muted rounded-full" />
+          <span className="block w-[14px] h-[1.5px] bg-fumi-text-muted rounded-full" />
         </button>
       </div>
 
