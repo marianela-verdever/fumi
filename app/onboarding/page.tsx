@@ -7,17 +7,6 @@ import { useLang } from "@/lib/lang-context";
 import type { Lang } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase/client";
 import { rowToBaby } from "@/lib/supabase/types";
-import { voiceDrafts } from "@/lib/sample-data";
-
-// Chapter periods for months 1–3 (approximate)
-function chapterPeriod(month: number, birthDate: string): string {
-  const d = new Date(birthDate);
-  d.setMonth(d.getMonth() + month - 1);
-  const start = d.toLocaleDateString("es-AR", { month: "short", year: "numeric" });
-  d.setMonth(d.getMonth() + 1);
-  const end = d.toLocaleDateString("es-AR", { month: "short", year: "numeric" });
-  return `${start} — ${end}`;
-}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -48,43 +37,7 @@ export default function OnboardingPage() {
 
     const baby = rowToBaby(babyData);
 
-    // 2. Seed starter chapters (months 1–3)
-    const starterChapters = [
-      {
-        baby_id: baby.id,
-        month: 1,
-        period: chapterPeriod(1, birthDate),
-        status: "approved",
-        voice: "baby",
-        generated_content: voiceDrafts.baby,
-        own_text_blocks: [],
-        entry_ids: [],
-      },
-      {
-        baby_id: baby.id,
-        month: 2,
-        period: chapterPeriod(2, birthDate),
-        status: "draft",
-        voice: "baby",
-        generated_content: "",
-        own_text_blocks: [],
-        entry_ids: [],
-      },
-      {
-        baby_id: baby.id,
-        month: 3,
-        period: chapterPeriod(3, birthDate),
-        status: "collecting",
-        voice: "baby",
-        generated_content: "",
-        own_text_blocks: [],
-        entry_ids: [],
-      },
-    ];
-
-    await supabase.from("chapters").insert(starterChapters);
-
-    // 3. Persist baby to localStorage (session anchor)
+    // 2. Persist baby to localStorage (session anchor)
     localStorage.setItem("fumi_baby", JSON.stringify(baby));
     localStorage.removeItem("fumi_entries"); // clear any stale data
 

@@ -142,6 +142,7 @@ function EmptyTimeline() {
 export default function TimelinePage() {
   const [baby, setBaby] = useState<Baby | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [hasDraftChapter, setHasDraftChapter] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { lang } = useLang();
@@ -155,6 +156,7 @@ export default function TimelinePage() {
     const babyObj: Baby = JSON.parse(stored);
     setBaby(babyObj);
 
+    // Fetch entries
     supabase
       .from("entries")
       .select("*")
@@ -166,6 +168,19 @@ export default function TimelinePage() {
         }
         setIsLoading(false);
       });
+
+    // Check if there are any draft/approved chapters to show banner
+    supabase
+      .from("chapters")
+      .select("id")
+      .eq("baby_id", babyObj.id)
+      .in("status", ["draft", "approved"])
+      .limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setHasDraftChapter(true);
+        }
+      });
   }, [router]);
 
   if (!baby) return null;
@@ -173,7 +188,7 @@ export default function TimelinePage() {
   return (
     <AppShell>
       <BabyHeader baby={baby} />
-      <AIBanner />
+      {hasDraftChapter && <AIBanner />}
 
       {isLoading ? (
         <TimelineSkeleton />
