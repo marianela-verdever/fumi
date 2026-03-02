@@ -54,6 +54,7 @@ function AIBanner() {
 }
 
 function TimelineEntry({ entry, isLast, index }: { entry: Entry; isLast: boolean; index: number }) {
+  const router = useRouter();
   const { t } = useLang();
   const isMilestone =
     entry.tags.includes("milestone") || entry.tags.includes("primera vez");
@@ -61,8 +62,9 @@ function TimelineEntry({ entry, isLast, index }: { entry: Entry; isLast: boolean
 
   return (
     <div
-      className="flex gap-4"
+      className="flex gap-4 cursor-pointer group"
       style={{ animation: `slide-up 0.4s ease-out ${index * 0.06}s both` }}
+      onClick={() => router.push(`/entry/${entry.id}`)}
     >
       <div className="flex flex-col items-center w-5 shrink-0">
         <div
@@ -77,7 +79,7 @@ function TimelineEntry({ entry, isLast, index }: { entry: Entry; isLast: boolean
         )}
       </div>
 
-      <div className="pb-6 flex-grow">
+      <div className="pb-6 flex-grow group-hover:opacity-70 transition-opacity">
         <div className="flex items-center gap-2 mb-1.5">
           <span className="font-[family-name:var(--font-dm-sans)] text-[11px] text-fumi-text-muted">
             {formatDate(entry.date)}

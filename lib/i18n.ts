@@ -86,6 +86,12 @@ export const strings = {
       insertHere: "↓ Your text will go here",
       monthPrefix: "Month",
     },
+    editEntry: {
+      title: "Edit moment",
+      updateButton: "Save changes",
+      deleteButton: "Delete moment",
+      deleteConfirm: "Are you sure you want to delete this moment?",
+    },
     book: {
       bookOf: "the book of",
       voiceLabel: "Voice",
@@ -186,6 +192,12 @@ export const strings = {
       remove: "Eliminar",
       insertHere: "↓ Tu texto irá acá",
       monthPrefix: "Mes",
+    },
+    editEntry: {
+      title: "Editar momento",
+      updateButton: "Guardar cambios",
+      deleteButton: "Eliminar momento",
+      deleteConfirm: "¿Segura que querés eliminar este momento?",
     },
     book: {
       bookOf: "el libro de",
