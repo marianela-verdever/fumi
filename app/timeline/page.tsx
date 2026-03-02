@@ -95,8 +95,17 @@ function TimelineEntry({ entry, isLast, index }: { entry: Entry; isLast: boolean
         </div>
 
         {entry.mediaUrls.length > 0 && entry.mediaUrls[0] && (
-          <div className="w-full h-[140px] bg-fumi-bg-warm rounded-[10px] flex items-center justify-center text-[40px] mb-2">
-            {entry.mediaUrls[0]}
+          <div className="relative mb-2">
+            <img
+              src={entry.mediaUrls[0]}
+              alt=""
+              className="w-full h-[140px] object-cover rounded-[10px]"
+            />
+            {entry.mediaUrls.length > 1 && (
+              <span className="absolute bottom-2 right-2 bg-black/50 text-white font-[family-name:var(--font-dm-sans)] text-[11px] px-2 py-0.5 rounded-[8px]">
+                +{entry.mediaUrls.length - 1}
+              </span>
+            )}
           </div>
         )}
 

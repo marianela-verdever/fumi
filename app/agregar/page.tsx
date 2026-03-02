@@ -9,6 +9,7 @@ import { getTodayISO, formatDate, getMonthNumber } from "@/lib/utils";
 import { placeholders, placeholdersEN } from "@/lib/sample-data";
 import { useLang } from "@/lib/lang-context";
 import { supabase } from "@/lib/supabase/client";
+import { uploadEntryMedia } from "@/lib/supabase/storage";
 import type { Baby } from "@/lib/types";
 
 const allTags: Tag[] = ["primera vez", "milestone", "gracioso", "familia", "salud"];
@@ -23,9 +24,12 @@ export default function AgregarPage() {
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [audioState, setAudioState] = useState<AudioState>("idle");
   const [transcription, setTranscription] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [placeholder, setPlaceholder] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const pool = lang === "en" ? placeholdersEN : placeholders;
@@ -37,6 +41,22 @@ export default function AgregarPage() {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
+  };
+
+  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    setSelectedFiles((prev) => [...prev, ...files]);
+    const newPreviews = files.map((f) => URL.createObjectURL(f));
+    setPreviews((prev) => [...prev, ...newPreviews]);
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  };
+
+  const removePhoto = (index: number) => {
+    URL.revokeObjectURL(previews[index]);
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAudio = async () => {
@@ -67,7 +87,7 @@ export default function AgregarPage() {
 
   const handleSave = async () => {
     const content = text || transcription;
-    if (!content.trim()) return;
+    if (!content.trim() && selectedFiles.length === 0) return;
 
     const stored = localStorage.getItem("fumi_baby");
     if (!stored) return;
@@ -76,14 +96,37 @@ export default function AgregarPage() {
     setSaving(true);
     setSaveError("");
 
+    // Upload photos first
+    let mediaUrls: string[] = [];
+    if (selectedFiles.length > 0) {
+      try {
+        mediaUrls = await Promise.all(
+          selectedFiles.map((f) => uploadEntryMedia(f, baby.id))
+        );
+      } catch {
+        setSaveError(
+          lang === "en"
+            ? "Could not upload photos. Try again."
+            : "No se pudieron subir las fotos. Intentá de nuevo."
+        );
+        setSaving(false);
+        return;
+      }
+    }
+
+    // Determine entry type
+    const hasPhotos = mediaUrls.length > 0;
+    const hasText = !!(content.trim() || transcription.trim());
+    const entryType = hasPhotos && hasText ? "mixed" : hasPhotos ? "photo" : transcription ? "audio" : "text";
+
     const { data: entryData, error } = await supabase
       .from("entries")
       .insert({
         baby_id: baby.id,
         date,
-        type: transcription ? "audio" : "text",
+        type: entryType,
         content: content.trim(),
-        media_urls: [],
+        media_urls: mediaUrls,
         tags: selectedTags,
       })
       .select()
@@ -144,12 +187,55 @@ export default function AgregarPage() {
         </div>
 
         {/* Photo upload */}
-        <div className="w-full h-[160px] border-2 border-dashed border-fumi-border rounded-[14px] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-fumi-accent-soft transition-colors">
-          <span className="text-[28px] text-fumi-text-muted">⊕</span>
-          <span className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-muted">
-            {t.add.addMedia}
-          </span>
-        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic"
+          multiple
+          onChange={handleFiles}
+          className="hidden"
+        />
+
+        {previews.length === 0 ? (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full h-[120px] border-2 border-dashed border-fumi-border rounded-[14px] flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-fumi-accent-soft transition-colors bg-transparent"
+          >
+            <span className="text-[28px] text-fumi-text-muted">⊕</span>
+            <span className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-muted">
+              {t.add.addMedia}
+            </span>
+          </button>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {previews.map((src, i) => (
+                <div key={i} className="relative w-[80px] h-[80px] rounded-[10px] overflow-hidden">
+                  <img
+                    src={src}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white text-[11px] flex items-center justify-center border-none cursor-pointer leading-none"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-[80px] h-[80px] rounded-[10px] border-2 border-dashed border-fumi-border flex items-center justify-center cursor-pointer hover:border-fumi-accent-soft transition-colors bg-transparent"
+              >
+                <span className="text-[20px] text-fumi-text-muted">+</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Text input */}
         <div className="bg-white border border-fumi-border rounded-[14px] p-4">
@@ -244,7 +330,7 @@ export default function AgregarPage() {
         {/* Save button */}
         <button
           onClick={handleSave}
-          disabled={(!text.trim() && !transcription.trim()) || saving}
+          disabled={(!text.trim() && !transcription.trim() && selectedFiles.length === 0) || saving}
           className="w-full bg-fumi-accent text-white border-none rounded-[12px] py-4 font-[family-name:var(--font-dm-sans)] text-[15px] font-medium cursor-pointer mt-1 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
         >
           {saving ? "..." : t.add.saveButton}

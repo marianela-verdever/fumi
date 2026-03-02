@@ -163,6 +163,21 @@ export default function EditEntryPage() {
       />
 
       <div className="px-6 pt-4 flex flex-col gap-4">
+        {/* Photos */}
+        {entry.mediaUrls.length > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            {entry.mediaUrls.map((url, i) => (
+              <div key={i} className="w-[100px] h-[100px] rounded-[10px] overflow-hidden">
+                <img
+                  src={url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Date picker */}
         <div className="relative">
           <button
