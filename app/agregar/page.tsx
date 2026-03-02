@@ -164,25 +164,22 @@ export default function AgregarPage() {
 
       <div className="px-6 pt-4 flex flex-col gap-4">
         {/* Date picker */}
-        <div className="relative">
-          <button
-            onClick={() => dateInputRef.current?.showPicker()}
-            className="flex items-center gap-2 bg-fumi-bg-warm border-none rounded-[10px] px-3.5 py-2.5 cursor-pointer"
-          >
+        <div className="relative inline-flex">
+          <div className="flex items-center gap-2 bg-fumi-bg-warm rounded-[10px] px-3.5 py-2.5">
             <span className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary">
               {date === getTodayISO()
                 ? `${t.add.today}, ${formatDate(date)}`
                 : formatDate(date)}
             </span>
             <span className="text-[12px] text-fumi-text-muted">✎</span>
-          </button>
+          </div>
           <input
             ref={dateInputRef}
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             max={getTodayISO()}
-            className="absolute opacity-0 w-0 h-0"
+            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
           />
         </div>
 
