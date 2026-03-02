@@ -1,42 +1,86 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useLang } from "@/lib/lang-context";
 import type { Lang } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  const router = useRouter();
   const { lang, setLang, t } = useLang();
   const [email, setEmail] = useState("");
+  const [step, setStep] = useState<"email" | "code">("email");
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
+  const startCooldown = (seconds: number) => {
+    setCooldown(seconds);
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+    cooldownRef.current = setInterval(() => {
+      setCooldown((s) => {
+        if (s <= 1) {
+          clearInterval(cooldownRef.current!);
+          cooldownRef.current = null;
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+  };
+
+  const handleSendCode = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!email.trim() || cooldown > 0) return;
     setLoading(true);
     setError("");
 
-    const redirectTo = `${window.location.origin}/auth/callback`;
-
     const { error: authError } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: redirectTo },
+      // No emailRedirectTo → Supabase sends a 6-digit code, not a magic link
     });
 
     if (authError) {
-      setError(
-        lang === "en"
-          ? "Something went wrong. Try again."
-          : "Algo salió mal. Intentá de nuevo."
-      );
+      if (authError.status === 429) {
+        setError(t.login.rateLimited);
+        startCooldown(60);
+      } else {
+        setError(
+          lang === "en"
+            ? "Something went wrong. Try again."
+            : "Algo salió mal. Intentá de nuevo."
+        );
+      }
       setLoading(false);
       return;
     }
 
-    setSent(true);
+    setStep("code");
+    setCode("");
     setLoading(false);
+  };
+
+  const handleVerifyCode = async (codeValue = code) => {
+    if (codeValue.length < 6 || loading) return;
+    setLoading(true);
+    setError("");
+
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: codeValue.trim(),
+      type: "email",
+    });
+
+    if (verifyError) {
+      setError(t.login.wrongCode);
+      setLoading(false);
+      return;
+    }
+
+    router.push("/");
   };
 
   return (
@@ -63,12 +107,12 @@ export default function LoginPage() {
           fumi.
         </span>
         <p className="font-[family-name:var(--font-dm-sans)] text-[15px] text-fumi-text-secondary mt-3 leading-relaxed">
-          {t.login.subtitle}
+          {step === "email" ? t.login.subtitle : t.login.enterCode}
         </p>
       </div>
 
-      {!sent ? (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      {step === "email" ? (
+        <form onSubmit={handleSendCode} className="flex flex-col gap-5">
           <div>
             <label className="font-[family-name:var(--font-dm-sans)] text-[11px] uppercase tracking-[0.1em] text-fumi-text-muted block mb-2">
               Email
@@ -91,26 +135,67 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={!email.trim() || loading}
+            disabled={!email.trim() || loading || cooldown > 0}
             className="w-full bg-fumi-accent text-white border-none rounded-[12px] py-4 font-[family-name:var(--font-dm-sans)] text-[15px] font-medium cursor-pointer mt-2 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
-            {loading ? "..." : t.login.sendLink}
+            {loading
+              ? "..."
+              : cooldown > 0
+              ? `${t.login.sendLink} (${cooldown}s)`
+              : t.login.sendLink}
           </button>
         </form>
       ) : (
-        <div className="flex flex-col items-center gap-3 text-center">
-          <span className="text-[40px]">✉️</span>
-          <h2 className="font-[family-name:var(--font-playfair)] text-[22px] text-fumi-text font-medium m-0">
-            {t.login.linkSent}
-          </h2>
-          <p className="font-[family-name:var(--font-dm-sans)] text-[14px] text-fumi-text-secondary leading-relaxed m-0">
-            {t.login.linkSentSubtitle}
-          </p>
+        <div className="flex flex-col gap-5">
+          <div>
+            <p className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary mb-4">
+              {t.login.enterCodeSubtitle}{" "}
+              <span className="text-fumi-text font-medium">{email}</span>
+            </p>
+            <label className="font-[family-name:var(--font-dm-sans)] text-[11px] uppercase tracking-[0.1em] text-fumi-text-muted block mb-2">
+              {t.login.enterCode}
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={code}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                setCode(val);
+                if (val.length === 6) handleVerifyCode(val);
+              }}
+              placeholder={t.login.codePlaceholder}
+              autoFocus
+              className="w-full bg-white border border-fumi-border rounded-[14px] px-4 py-3.5 font-[family-name:var(--font-dm-sans)] text-[22px] text-fumi-text outline-none focus:border-fumi-accent transition-colors tracking-[0.3em] text-center"
+            />
+          </div>
+
+          {error && (
+            <p className="font-[family-name:var(--font-dm-sans)] text-[13px] text-red-400 text-center -mt-2">
+              {error}
+            </p>
+          )}
+
           <button
-            onClick={() => { setSent(false); setEmail(""); }}
-            className="mt-4 font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-accent bg-transparent border-none cursor-pointer underline"
+            type="button"
+            onClick={() => handleVerifyCode()}
+            disabled={code.length < 6 || loading}
+            className="w-full bg-fumi-accent text-white border-none rounded-[12px] py-4 font-[family-name:var(--font-dm-sans)] text-[15px] font-medium cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
-            {lang === "en" ? "Use a different email" : "Usar otro email"}
+            {loading ? "..." : t.login.verifyCode}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setStep("email");
+              setCode("");
+              setError("");
+            }}
+            className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-accent bg-transparent border-none cursor-pointer text-center"
+          >
+            {t.login.resendCode}
           </button>
         </div>
       )}
