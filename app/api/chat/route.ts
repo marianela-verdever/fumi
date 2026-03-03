@@ -56,12 +56,27 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { message, history, babyName, lang } = (await req.json()) as {
+    const body = await req.json();
+    const { message, history, babyName, lang } = body as {
       message: string;
       history: Array<{ role: "ai" | "user"; text: string }>;
       babyName: string;
       lang: "en" | "es";
     };
+
+    // ── Input validation ──
+    if (typeof message !== "string" || !message.trim() || message.length > 2000) {
+      return NextResponse.json({ reply: "Invalid message." }, { status: 400 });
+    }
+    if (typeof babyName !== "string" || !babyName.trim() || babyName.length > 100) {
+      return NextResponse.json({ reply: "Invalid baby name." }, { status: 400 });
+    }
+    if (lang !== "en" && lang !== "es") {
+      return NextResponse.json({ reply: "Invalid language." }, { status: 400 });
+    }
+    if (!Array.isArray(history)) {
+      return NextResponse.json({ reply: "Invalid history." }, { status: 400 });
+    }
 
     const systemPrompt = (systemPrompts[lang] ?? systemPrompts.en).replace(
       /\{babyName\}/g,

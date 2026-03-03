@@ -98,6 +98,27 @@ export async function POST(req: NextRequest) {
       lang: "en" | "es";
     };
 
+    // ── Input validation ──
+    const validVoices: Voice[] = ["yo", "nosotros", "baby"];
+    if (typeof babyName !== "string" || !babyName.trim() || babyName.length > 100) {
+      return NextResponse.json({ content: "Invalid baby name." }, { status: 400 });
+    }
+    if (lang !== "en" && lang !== "es") {
+      return NextResponse.json({ content: "Invalid language." }, { status: 400 });
+    }
+    if (!validVoices.includes(voice)) {
+      return NextResponse.json({ content: "Invalid voice." }, { status: 400 });
+    }
+    if (instruction && (typeof instruction !== "string" || instruction.length > 1000)) {
+      return NextResponse.json({ content: "Invalid instruction." }, { status: 400 });
+    }
+    if (currentContent && (typeof currentContent !== "string" || currentContent.length > 10000)) {
+      return NextResponse.json({ content: "Content too long." }, { status: 400 });
+    }
+    if (entries && (!Array.isArray(entries) || entries.length > 200)) {
+      return NextResponse.json({ content: "Too many entries." }, { status: 400 });
+    }
+
     // ── Case 1: No entries and no current content → short placeholder ──
     if ((!entries || entries.length === 0) && !currentContent && !instruction) {
       const placeholders: Record<string, Record<Voice, string>> = {
