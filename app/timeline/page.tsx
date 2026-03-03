@@ -276,8 +276,9 @@ export default function TimelinePage() {
   const [hasDraftChapter, setHasDraftChapter] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [modalImages, setModalImages] = useState<{ urls: string[]; index: number } | null>(null);
+  const [showNudge, setShowNudge] = useState(false);
   const router = useRouter();
-  const { lang } = useLang();
+  const { t, lang } = useLang();
 
   useEffect(() => {
     const stored = localStorage.getItem("fumi_baby");
@@ -296,7 +297,17 @@ export default function TimelinePage() {
       .order("date", { ascending: false })
       .then(({ data, error }) => {
         if (!error && data) {
-          setEntries(data.map(rowToEntry));
+          const mapped = data.map(rowToEntry);
+          setEntries(mapped);
+
+          // Check if no entries in the last 7 days → show nudge
+          if (mapped.length > 0) {
+            const latest = new Date(mapped[0].createdAt);
+            const daysSince = Math.floor(
+              (Date.now() - latest.getTime()) / (1000 * 60 * 60 * 24)
+            );
+            if (daysSince >= 7) setShowNudge(true);
+          }
         }
         setIsLoading(false);
       });
@@ -320,6 +331,22 @@ export default function TimelinePage() {
   return (
     <AppShell>
       <BabyHeader baby={baby} />
+      {showNudge && (
+        <div className="mx-6 mb-3 px-4 py-3 bg-fumi-accent/10 rounded-[12px] flex items-start gap-3">
+          <span className="text-[18px] mt-0.5">✦</span>
+          <div className="flex-1">
+            <p className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-accent m-0 leading-[1.5]">
+              {t.timeline.weeklyNudge} {baby.name}?
+            </p>
+          </div>
+          <button
+            onClick={() => setShowNudge(false)}
+            className="text-fumi-accent/50 bg-transparent border-none cursor-pointer text-[14px] p-0 shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {hasDraftChapter && <AIBanner />}
 
       {isLoading ? (

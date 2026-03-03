@@ -20,6 +20,7 @@ export const strings = {
       draftReadyPrefix: "Your",
       draftReadyMonthLabel: "draft for month",
       draftReadySuffix: "is ready to review.",
+      weeklyNudge: "You haven't added a moment this week. What's new with",
     },
     add: {
       title: "New moment",
@@ -160,6 +161,7 @@ export const strings = {
       draftReadyPrefix: "Tu",
       draftReadyMonthLabel: "borrador del mes",
       draftReadySuffix: "está listo para revisar.",
+      weeklyNudge: "No agregaste momentos esta semana. ¿Qué hay de nuevo con",
     },
     add: {
       title: "Nuevo momento",
