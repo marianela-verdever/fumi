@@ -148,9 +148,12 @@ export default function LoginPage() {
       ) : (
         <div className="flex flex-col gap-5">
           <div>
-            <p className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary mb-4">
+            <p className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary mb-1">
               {t.login.enterCodeSubtitle}{" "}
               <span className="text-fumi-text font-medium">{email}</span>
+            </p>
+            <p className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-muted mb-4">
+              {t.login.checkSpam}
             </p>
             <label className="font-[family-name:var(--font-dm-sans)] text-[11px] uppercase tracking-[0.1em] text-fumi-text-muted block mb-2">
               {t.login.enterCode}
