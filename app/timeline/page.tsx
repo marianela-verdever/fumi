@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import type { Baby, Entry } from "@/lib/types";
@@ -8,6 +8,102 @@ import { calculateAge, formatDate } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
 import { rowToEntry } from "@/lib/supabase/types";
 import { useLang } from "@/lib/lang-context";
+
+function ImageModal({
+  urls,
+  initialIndex,
+  onClose,
+}: {
+  urls: string[];
+  initialIndex: number;
+  onClose: () => void;
+}) {
+  const [current, setCurrent] = useState(initialIndex);
+
+  const handleKey = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight" && current < urls.length - 1)
+        setCurrent((c) => c + 1);
+      if (e.key === "ArrowLeft" && current > 0) setCurrent((c) => c - 1);
+    },
+    [current, urls.length, onClose]
+  );
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = "";
+    };
+  }, [handleKey]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85"
+      onClick={onClose}
+    >
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 safe-area-top w-9 h-9 flex items-center justify-center rounded-full bg-white/15 text-white text-lg border-none cursor-pointer z-[101] hover:bg-white/25 transition-colors"
+        aria-label="Close"
+      >
+        ✕
+      </button>
+
+      {/* Image */}
+      <img
+        src={urls[current]}
+        alt=""
+        className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg"
+        onClick={(e) => e.stopPropagation()}
+      />
+
+      {/* Navigation arrows */}
+      {urls.length > 1 && (
+        <>
+          {current > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrent((c) => c - 1);
+              }}
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-white/15 text-white text-base border-none cursor-pointer hover:bg-white/25 transition-colors"
+              aria-label="Previous"
+            >
+              ‹
+            </button>
+          )}
+          {current < urls.length - 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrent((c) => c + 1);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-white/15 text-white text-base border-none cursor-pointer hover:bg-white/25 transition-colors"
+              aria-label="Next"
+            >
+              ›
+            </button>
+          )}
+          {/* Dots indicator */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5">
+            {urls.map((_, i) => (
+              <span
+                key={i}
+                className={`block w-1.5 h-1.5 rounded-full transition-colors ${
+                  i === current ? "bg-white" : "bg-white/40"
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 function BabyHeader({ baby }: { baby: Baby }) {
   const { t } = useLang();
@@ -54,18 +150,29 @@ function AIBanner() {
   );
 }
 
-function TimelineEntry({ entry, isLast, index }: { entry: Entry; isLast: boolean; index: number }) {
+function TimelineEntry({
+  entry,
+  isLast,
+  index,
+  onImageClick,
+}: {
+  entry: Entry;
+  isLast: boolean;
+  index: number;
+  onImageClick: (urls: string[], startIndex: number) => void;
+}) {
   const router = useRouter();
   const { t } = useLang();
   const isMilestone =
     entry.tags.includes("milestone") || entry.tags.includes("primera vez");
   const displayTag = (tag: string) => t.add.tags[tag] ?? tag;
 
+  const goToEdit = () => router.push(`/entry/${entry.id}`);
+
   return (
     <div
-      className="flex gap-4 cursor-pointer group"
+      className="flex gap-4 group"
       style={{ animation: `slide-up 0.4s ease-out ${index * 0.06}s both` }}
-      onClick={() => router.push(`/entry/${entry.id}`)}
     >
       <div className="flex flex-col items-center w-5 shrink-0">
         <div
@@ -80,8 +187,12 @@ function TimelineEntry({ entry, isLast, index }: { entry: Entry; isLast: boolean
         )}
       </div>
 
-      <div className="pb-6 flex-grow group-hover:opacity-70 transition-opacity">
-        <div className="flex items-center gap-2 mb-1.5">
+      <div className="pb-6 flex-grow">
+        {/* Date + tags — click to edit */}
+        <div
+          className="flex items-center gap-2 mb-1.5 cursor-pointer"
+          onClick={goToEdit}
+        >
           <span className="font-[family-name:var(--font-dm-sans)] text-[11px] text-fumi-text-muted">
             {formatDate(entry.date)}
           </span>
@@ -95,8 +206,12 @@ function TimelineEntry({ entry, isLast, index }: { entry: Entry; isLast: boolean
           ))}
         </div>
 
+        {/* Image — click to preview */}
         {entry.mediaUrls.length > 0 && entry.mediaUrls[0] && (
-          <div className="relative mb-2">
+          <div
+            className="relative mb-2 cursor-pointer"
+            onClick={() => onImageClick(entry.mediaUrls, 0)}
+          >
             <img
               src={entry.mediaUrls[0]}
               alt=""
@@ -110,7 +225,11 @@ function TimelineEntry({ entry, isLast, index }: { entry: Entry; isLast: boolean
           </div>
         )}
 
-        <p className="font-[family-name:var(--font-playfair)] text-[15px] text-fumi-text m-0 leading-[1.6]">
+        {/* Text — click to edit */}
+        <p
+          className="font-[family-name:var(--font-playfair)] text-[15px] text-fumi-text m-0 leading-[1.6] cursor-pointer hover:opacity-70 transition-opacity"
+          onClick={goToEdit}
+        >
           {entry.content}
         </p>
       </div>
@@ -156,6 +275,7 @@ export default function TimelinePage() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [hasDraftChapter, setHasDraftChapter] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [modalImages, setModalImages] = useState<{ urls: string[]; index: number } | null>(null);
   const router = useRouter();
   const { lang } = useLang();
 
@@ -214,9 +334,20 @@ export default function TimelinePage() {
               entry={entry}
               isLast={i === entries.length - 1}
               index={i}
+              onImageClick={(urls, startIndex) =>
+                setModalImages({ urls, index: startIndex })
+              }
             />
           ))}
         </div>
+      )}
+
+      {modalImages && (
+        <ImageModal
+          urls={modalImages.urls}
+          initialIndex={modalImages.index}
+          onClose={() => setModalImages(null)}
+        />
       )}
     </AppShell>
   );

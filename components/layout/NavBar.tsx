@@ -10,8 +10,8 @@ export default function NavBar() {
 
   const items = [
     { id: "timeline", href: "/timeline", label: t.nav.timeline, icon: "◯" },
-    { id: "agregar", href: "/agregar", label: t.nav.add, icon: "+" },
     { id: "conversar", href: "/conversar", label: t.nav.chat, icon: "◬" },
+    { id: "agregar", href: "/agregar", label: t.nav.add, icon: "+" },
     { id: "capitulos", href: "/capitulos", label: t.nav.chapters, icon: "▭" },
     { id: "libro", href: "/libro", label: t.nav.book, icon: "◻" },
   ];
