@@ -64,7 +64,7 @@ export default function LoginPage() {
   };
 
   const handleVerifyCode = async (codeValue = code) => {
-    if (codeValue.length < 6 || loading) return;
+    if (codeValue.length < 8 || loading) return;
     setLoading(true);
     setError("");
 
@@ -158,12 +158,12 @@ export default function LoginPage() {
             <input
               type="text"
               inputMode="numeric"
-              maxLength={6}
+              maxLength={8}
               value={code}
               onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                const val = e.target.value.replace(/\D/g, "").slice(0, 8);
                 setCode(val);
-                if (val.length === 6) handleVerifyCode(val);
+                if (val.length === 8) handleVerifyCode(val);
               }}
               placeholder={t.login.codePlaceholder}
               autoFocus
@@ -180,7 +180,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => handleVerifyCode()}
-            disabled={code.length < 6 || loading}
+            disabled={code.length < 8 || loading}
             className="w-full bg-fumi-accent text-white border-none rounded-[12px] py-4 font-[family-name:var(--font-dm-sans)] text-[15px] font-medium cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
             {loading ? "..." : t.login.verifyCode}
