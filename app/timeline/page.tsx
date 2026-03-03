@@ -310,10 +310,7 @@ export default function TimelinePage() {
     const babyObj: Baby = JSON.parse(stored);
     setBaby(babyObj);
 
-    // Show tour if not yet completed
-    if (!localStorage.getItem("fumi_tour_done")) {
-      setShowTour(true);
-    }
+    const tourDoneLocally = !!localStorage.getItem("fumi_tour_done");
 
     // Fetch entries
     supabase
@@ -325,6 +322,15 @@ export default function TimelinePage() {
         if (!error && data) {
           const mapped = data.map(rowToEntry);
           setEntries(mapped);
+
+          // Show tour only if: not done locally AND user has no entries yet (new user)
+          // If user already has entries, they're not new — skip tour even on new device
+          if (!tourDoneLocally && mapped.length === 0) {
+            setShowTour(true);
+          } else if (!tourDoneLocally && mapped.length > 0) {
+            // Returning user on new device — mark tour done silently
+            localStorage.setItem("fumi_tour_done", "1");
+          }
 
           // Check if no entries in the last 7 days → show nudge
           if (mapped.length > 0) {

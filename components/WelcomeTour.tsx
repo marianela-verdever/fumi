@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useLang } from "@/lib/lang-context";
 
 interface WelcomeTourProps {
@@ -30,6 +31,24 @@ export default function WelcomeTour({ babyName, onComplete }: WelcomeTourProps) 
   const { t, lang } = useLang();
   const [page, setPage] = useState(0);
   const [exiting, setExiting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Touch swipe tracking
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+
+  // Mount check for portal (SSR safety)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Lock body scroll while tour is open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
 
   const tourScreens = [
     { title: t.tour.screen1Title, desc: t.tour.screen1Desc },
@@ -57,14 +76,38 @@ export default function WelcomeTour({ babyName, onComplete }: WelcomeTourProps) 
     handleComplete();
   };
 
+  // Swipe handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+
+    // Only trigger if horizontal swipe is dominant (not a vertical scroll)
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+      if (deltaX < 0 && page < 2) {
+        // Swipe left → next
+        setPage(page + 1);
+      } else if (deltaX > 0 && page > 0) {
+        // Swipe right → previous
+        setPage(page - 1);
+      }
+    }
+  };
+
   const screen = screens[page];
   const content = tourScreens[page];
 
-  return (
+  const tourContent = (
     <div
       className={`fixed inset-0 z-[200] flex flex-col transition-opacity duration-400 ${
         exiting ? "opacity-0" : "opacity-100"
       }`}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Background */}
       <div className={`absolute inset-0 bg-gradient-to-b ${screen.gradient}`} />
@@ -116,8 +159,8 @@ export default function WelcomeTour({ babyName, onComplete }: WelcomeTourProps) 
         </p>
       </div>
 
-      {/* Bottom area: dots + button */}
-      <div className="relative z-10 px-8 pb-10 safe-area-bottom max-w-[390px] mx-auto w-full">
+      {/* Bottom area: dots + button — extra padding to clear navbar */}
+      <div className="relative z-10 px-8 pb-24 sm:pb-10 safe-area-bottom max-w-[390px] mx-auto w-full">
         {/* Dots */}
         <div className="flex justify-center gap-2 mb-6">
           {[0, 1, 2].map((i) => (
@@ -153,4 +196,8 @@ export default function WelcomeTour({ babyName, onComplete }: WelcomeTourProps) 
       </div>
     </div>
   );
+
+  // Render via portal to escape AppShell stacking context
+  if (!mounted) return null;
+  return createPortal(tourContent, document.body);
 }
