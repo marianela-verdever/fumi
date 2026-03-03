@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase/client";
 import { rowToChapter } from "@/lib/supabase/types";
 import { useLang } from "@/lib/lang-context";
 import type { Lang } from "@/lib/i18n";
+import ShareCardModal from "@/components/ShareCardModal";
 
 interface OwnBlock {
   id: string;
@@ -79,6 +80,7 @@ export default function ChapterEditorPage() {
   const [babyName, setBabyName] = useState("Aurora");
   const [approved, setApproved] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Load chapter from Supabase
   useEffect(() => {
@@ -589,6 +591,12 @@ export default function ChapterEditorPage() {
         >
           {ce.regenerate}
         </button>
+        <button
+          onClick={() => setShowShareModal(true)}
+          className="py-3 px-4 rounded-[12px] border border-fumi-border bg-transparent font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary cursor-pointer hover:border-fumi-accent hover:text-fumi-accent transition-colors"
+        >
+          {ce.shareButton}
+        </button>
       </div>
 
       {/* Add own text button */}
@@ -625,6 +633,23 @@ export default function ChapterEditorPage() {
           </button>
         )}
       </div>
+
+      {/* Share card modal */}
+      {showShareModal && chapter && (
+        <ShareCardModal
+          excerpt={paragraphs[0] ?? content.slice(0, 200)}
+          babyName={babyName}
+          monthLabel={`${ce.monthPrefix} ${chapter.month}`}
+          period={chapter.period}
+          onClose={() => setShowShareModal(false)}
+          t={{
+            shareTitle: ce.shareTitle,
+            shareDownload: ce.shareDownload,
+            shareShare: ce.shareShare,
+            shareClose: ce.shareClose,
+          }}
+        />
+      )}
     </AppShell>
   );
 }

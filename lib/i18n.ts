@@ -87,6 +87,11 @@ export const strings = {
       remove: "Remove",
       insertHere: "↓ Your text will go here",
       monthPrefix: "Month",
+      shareButton: "Share ◻",
+      shareTitle: "Share a preview",
+      shareDownload: "Download image",
+      shareShare: "Share",
+      shareClose: "Close",
     },
     editEntry: {
       title: "Edit moment",
@@ -222,6 +227,11 @@ export const strings = {
       remove: "Eliminar",
       insertHere: "↓ Tu texto irá acá",
       monthPrefix: "Mes",
+      shareButton: "Compartir ◻",
+      shareTitle: "Compartí un adelanto",
+      shareDownload: "Descargar imagen",
+      shareShare: "Compartir",
+      shareClose: "Cerrar",
     },
     editEntry: {
       title: "Editar momento",
