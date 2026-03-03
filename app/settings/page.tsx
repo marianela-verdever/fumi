@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const [baby, setBaby] = useState<Baby | null>(null);
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
+  const [selectedLang, setSelectedLang] = useState<Lang>(lang);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -47,6 +48,12 @@ export default function SettingsPage() {
       const updated = { ...baby, name: name.trim(), birthDate };
       localStorage.setItem("fumi_baby", JSON.stringify(updated));
       setBaby(updated);
+
+      // Apply language change
+      if (selectedLang !== lang) {
+        setLang(selectedLang);
+      }
+
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
@@ -60,7 +67,7 @@ export default function SettingsPage() {
   };
 
   const hasChanges =
-    baby && (name.trim() !== baby.name || birthDate !== baby.birthDate);
+    baby && (name.trim() !== baby.name || birthDate !== baby.birthDate || selectedLang !== lang);
 
   return (
     <AppShell>
@@ -103,9 +110,9 @@ export default function SettingsPage() {
             {(["en", "es"] as Lang[]).map((l) => (
               <button
                 key={l}
-                onClick={() => setLang(l)}
+                onClick={() => setSelectedLang(l)}
                 className={`flex-1 py-3 rounded-[12px] font-[family-name:var(--font-dm-sans)] text-[14px] cursor-pointer transition-all ${
-                  lang === l
+                  selectedLang === l
                     ? "bg-fumi-accent text-white border-none"
                     : "bg-white border border-fumi-border text-fumi-text-secondary"
                 }`}

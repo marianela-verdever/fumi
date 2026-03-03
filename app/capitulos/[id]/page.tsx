@@ -691,6 +691,7 @@ export default function ChapterEditorPage() {
           babyName={babyName}
           monthLabel={`${ce.monthPrefix} ${chapter.month}`}
           period={chapter.period}
+          photos={entryPhotos}
           onClose={() => setShowShareModal(false)}
           t={{
             shareTitle: ce.shareTitle,
