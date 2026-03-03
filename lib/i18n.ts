@@ -57,6 +57,8 @@ export const strings = {
       createChapter: "Create chapter",
       generating: "Generating...",
       noEntriesYet: "No entries yet",
+      yearPrefix: "Year",
+      newEntries: "new entries",
     },
     chapterEditor: {
       voiceLabel: "Story voice",
@@ -190,6 +192,8 @@ export const strings = {
       createChapter: "Crear capítulo",
       generating: "Generando...",
       noEntriesYet: "Sin entradas aún",
+      yearPrefix: "Año",
+      newEntries: "entradas nuevas",
     },
     chapterEditor: {
       voiceLabel: "Voz del relato",

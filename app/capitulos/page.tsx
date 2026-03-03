@@ -8,7 +8,7 @@ import type { Chapter, Baby, Entry } from "@/lib/types";
 import { supabase } from "@/lib/supabase/client";
 import { rowToChapter, rowToEntry } from "@/lib/supabase/types";
 import { useLang } from "@/lib/lang-context";
-import { getTotalMonths, getMonthNumber, getMonthPeriod } from "@/lib/utils";
+import { getTotalMonths, getMonthNumber, getMonthPeriod, getYearPeriod } from "@/lib/utils";
 
 export default function CapitulosPage() {
   const router = useRouter();
@@ -163,83 +163,127 @@ export default function CapitulosPage() {
             {t.chapters.statusCollecting}…
           </p>
         ) : (
-          Array.from({ length: totalMonths }, (_, i) => i + 1).map((month) => {
-            const chapter = chapterByMonth[month];
-            const monthEntries = entriesByMonth[month] ?? [];
-            const entryCount = monthEntries.length;
+          (() => {
+            const totalYears = Math.ceil(totalMonths / 12);
+            const singleYear = totalYears === 1;
 
-            // State 1: Has chapter — clickable card to editor
-            if (chapter) {
-              const status = statusMap[chapter.status] ?? statusMap.collecting;
-              return (
-                <button
-                  key={month}
-                  onClick={() => router.push(`/capitulos/${chapter.id}`)}
-                  className="p-4 bg-white rounded-[12px] border border-fumi-border flex items-center justify-between cursor-pointer text-left w-full hover:border-fumi-accent-soft transition-colors"
-                >
-                  <div>
-                    <p className="font-[family-name:var(--font-playfair)] text-[16px] text-fumi-text m-0 font-medium">
-                      {t.chapters.monthPrefix} {month}
-                    </p>
-                    <p className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-muted m-0 mt-0.5">
-                      {chapter.period} · {chapter.entryIds.length}{" "}
-                      {t.chapters.entriesSuffix}
-                    </p>
-                  </div>
-                  <span
-                    className={`font-[family-name:var(--font-dm-sans)] text-[11px] px-3 py-1 rounded-[20px] ${status.color} ${status.bg}`}
-                  >
-                    {status.label}
-                  </span>
-                </button>
+            return Array.from({ length: totalYears }, (_, yi) => yi + 1).map((year) => {
+              const firstMonth = (year - 1) * 12 + 1;
+              const lastMonth = Math.min(year * 12, totalMonths);
+              const months = Array.from(
+                { length: lastMonth - firstMonth + 1 },
+                (_, i) => firstMonth + i
               );
-            }
+              const isCurrentYear = year === totalYears;
+              const yearPeriod = baby ? getYearPeriod(year, baby.birthDate, totalMonths) : "";
 
-            // State 2: Has entries but no chapter — "Create chapter" button
-            if (entryCount > 0) {
-              return (
-                <div
-                  key={month}
-                  className="p-4 bg-white rounded-[12px] border border-fumi-border flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-[family-name:var(--font-playfair)] text-[16px] text-fumi-text m-0 font-medium">
-                      {t.chapters.monthPrefix} {month}
-                    </p>
-                    <p className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-muted m-0 mt-0.5">
-                      {entryCount} {t.chapters.entriesReady}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleCreateChapter(month)}
-                    disabled={creatingMonth !== null}
-                    className="font-[family-name:var(--font-dm-sans)] text-[12px] px-3.5 py-1.5 rounded-[20px] bg-fumi-accent text-white border-none cursor-pointer disabled:opacity-50 transition-opacity"
+              const yearContent = months.map((month) => {
+                const chapter = chapterByMonth[month];
+                const monthEntries = entriesByMonth[month] ?? [];
+                const entryCount = monthEntries.length;
+
+                // State 1: Has chapter — clickable card to editor
+                if (chapter) {
+                  const status = statusMap[chapter.status] ?? statusMap.collecting;
+                  const newCount = entryCount - chapter.entryIds.length;
+                  return (
+                    <button
+                      key={month}
+                      onClick={() => router.push(`/capitulos/${chapter.id}`)}
+                      className="p-4 bg-white rounded-[12px] border border-fumi-border flex items-center justify-between cursor-pointer text-left w-full hover:border-fumi-accent-soft transition-colors"
+                    >
+                      <div>
+                        <p className="font-[family-name:var(--font-playfair)] text-[16px] text-fumi-text m-0 font-medium">
+                          {t.chapters.monthPrefix} {month}
+                        </p>
+                        <p className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-muted m-0 mt-0.5">
+                          {chapter.period} · {chapter.entryIds.length}{" "}
+                          {t.chapters.entriesSuffix}
+                          {newCount > 0 && (
+                            <span className="text-fumi-accent font-medium">
+                              {" "}
+                              · +{newCount} {t.chapters.newEntries}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <span
+                        className={`font-[family-name:var(--font-dm-sans)] text-[11px] px-3 py-1 rounded-[20px] ${status.color} ${status.bg}`}
+                      >
+                        {status.label}
+                      </span>
+                    </button>
+                  );
+                }
+
+                // State 2: Has entries but no chapter — "Create chapter" button
+                if (entryCount > 0) {
+                  return (
+                    <div
+                      key={month}
+                      className="p-4 bg-white rounded-[12px] border border-fumi-border flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="font-[family-name:var(--font-playfair)] text-[16px] text-fumi-text m-0 font-medium">
+                          {t.chapters.monthPrefix} {month}
+                        </p>
+                        <p className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-muted m-0 mt-0.5">
+                          {entryCount} {t.chapters.entriesReady}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleCreateChapter(month)}
+                        disabled={creatingMonth !== null}
+                        className="font-[family-name:var(--font-dm-sans)] text-[12px] px-3.5 py-1.5 rounded-[20px] bg-fumi-accent text-white border-none cursor-pointer disabled:opacity-50 transition-opacity"
+                      >
+                        {creatingMonth === month
+                          ? t.chapters.generating
+                          : t.chapters.createChapter}
+                      </button>
+                    </div>
+                  );
+                }
+
+                // State 3: No entries, no chapter — dimmed
+                return (
+                  <div
+                    key={month}
+                    className="p-4 bg-fumi-bg-warm rounded-[12px] border border-fumi-border/50 flex items-center justify-between opacity-60"
                   >
-                    {creatingMonth === month
-                      ? t.chapters.generating
-                      : t.chapters.createChapter}
-                  </button>
-                </div>
-              );
-            }
+                    <div>
+                      <p className="font-[family-name:var(--font-playfair)] text-[16px] text-fumi-text-muted m-0 font-medium">
+                        {t.chapters.monthPrefix} {month}
+                      </p>
+                      <p className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-muted m-0 mt-0.5">
+                        {t.chapters.noEntriesYet}
+                      </p>
+                    </div>
+                  </div>
+                );
+              });
 
-            // State 3: No entries, no chapter — dimmed
-            return (
-              <div
-                key={month}
-                className="p-4 bg-fumi-bg-warm rounded-[12px] border border-fumi-border/50 flex items-center justify-between opacity-60"
-              >
-                <div>
-                  <p className="font-[family-name:var(--font-playfair)] text-[16px] text-fumi-text-muted m-0 font-medium">
-                    {t.chapters.monthPrefix} {month}
-                  </p>
-                  <p className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-muted m-0 mt-0.5">
-                    {t.chapters.noEntriesYet}
-                  </p>
-                </div>
-              </div>
-            );
-          })
+              // Single year: no grouping needed, just render the months
+              if (singleYear) {
+                return <div key={year} className="flex flex-col gap-3">{yearContent}</div>;
+              }
+
+              // Multiple years: collapsible sections
+              return (
+                <details key={year} open={isCurrentYear} className="group">
+                  <summary className="flex items-center gap-2 cursor-pointer list-none py-2 mb-1 [&::-webkit-details-marker]:hidden">
+                    <span className="text-[11px] text-fumi-text-muted transition-transform group-open:rotate-90">▶</span>
+                    <span className="font-[family-name:var(--font-playfair)] text-[14px] text-fumi-text font-medium">
+                      {t.chapters.yearPrefix} {year}
+                    </span>
+                    <span className="font-[family-name:var(--font-dm-sans)] text-[11px] text-fumi-text-muted">
+                      {yearPeriod}
+                    </span>
+                  </summary>
+                  <div className="flex flex-col gap-3 pb-2">{yearContent}</div>
+                </details>
+              );
+            });
+          })()
         )}
       </div>
     </AppShell>

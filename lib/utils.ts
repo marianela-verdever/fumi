@@ -79,6 +79,22 @@ export function getMonthNumber(date: string, birthDate: string): number {
   return Math.max(1, months + 1);
 }
 
+/** Returns the date range label for a year section (e.g., "Ene 2025 — Dic 2025"). */
+export function getYearPeriod(year: number, birthDate: string, totalMonths: number): string {
+  const birth = new Date(birthDate);
+  const firstMonth = (year - 1) * 12 + 1; // e.g., Year 1 → month 1, Year 2 → month 13
+  const lastMonth = Math.min(year * 12, totalMonths); // cap to actual months
+
+  const start = new Date(birth.getFullYear(), birth.getMonth() + firstMonth - 1, 1);
+  const end = new Date(birth.getFullYear(), birth.getMonth() + lastMonth, 0);
+
+  const startLabel = `${MONTHS_SHORT_ES[start.getMonth()]} ${start.getFullYear()}`;
+  const endLabel = `${MONTHS_SHORT_ES[end.getMonth()]} ${end.getFullYear()}`;
+
+  if (startLabel === endLabel) return startLabel;
+  return `${startLabel} — ${endLabel}`;
+}
+
 /** Returns how many months old the baby is (from birth to today). */
 export function getTotalMonths(birthDate: string): number {
   const now = new Date();
