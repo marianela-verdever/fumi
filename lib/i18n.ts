@@ -93,6 +93,9 @@ export const strings = {
       shareDownload: "Download image",
       shareShare: "Share",
       shareClose: "Close",
+      translateBanner: "This chapter is in Spanish.",
+      translateButton: "Translate to English ✦",
+      translating: "Translating...",
     },
     editEntry: {
       title: "Edit moment",
@@ -234,6 +237,9 @@ export const strings = {
       shareDownload: "Descargar imagen",
       shareShare: "Compartir",
       shareClose: "Cerrar",
+      translateBanner: "Este capítulo está en inglés.",
+      translateButton: "Traducir a español ✦",
+      translating: "Traduciendo...",
     },
     editEntry: {
       title: "Editar momento",

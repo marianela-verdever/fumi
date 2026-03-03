@@ -80,6 +80,7 @@ export default function ChapterEditorPage() {
   const [babyName, setBabyName] = useState("Aurora");
   const [approved, setApproved] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [entryPhotos, setEntryPhotos] = useState<string[]>([]);
 
@@ -277,6 +278,56 @@ export default function ChapterEditorPage() {
     const updated = ownBlocks.filter((b) => b.id !== blockId);
     setOwnBlocks(updated);
     saveOwnBlocks(updated);
+  };
+
+  // Detect if chapter content language differs from app language
+  const detectContentLang = (text: string): Lang | null => {
+    if (!text || text.length < 30) return null;
+    const sample = text.toLowerCase().slice(0, 500);
+    // Spanish markers
+    const esWords = ["que ", " de ", " los ", " las ", " del ", " una ", " con ", " para ", " por ", " fue ", " como ", " pero ", " cuando ", " había ", " este "];
+    // English markers
+    const enWords = ["the ", " and ", " was ", " with ", " that ", " for ", " his ", " her ", " from ", " they ", " were ", " have ", " this ", " been ", " when "];
+    const esScore = esWords.filter((w) => sample.includes(w)).length;
+    const enScore = enWords.filter((w) => sample.includes(w)).length;
+    if (esScore > enScore + 2) return "es";
+    if (enScore > esScore + 2) return "en";
+    return null;
+  };
+
+  const contentLang = detectContentLang(content);
+  const showTranslateBanner = contentLang !== null && contentLang !== lang && content.length > 30;
+
+  const handleTranslate = async () => {
+    setIsTranslating(true);
+    const instruction = lang === "en"
+      ? `Translate this entire chapter to English. Keep the same literary tone, voice, and style. Do not add or remove content — just translate accurately.`
+      : `Traducí este capítulo completo a español. Mantené el mismo tono literario, voz y estilo. No agregues ni elimines contenido — solo traducí fielmente. Usa español neutro con "tú".`;
+
+    try {
+      const res = await fetch("/api/chapters/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          entries: [],
+          voice,
+          month: chapter!.month,
+          babyName,
+          instruction,
+          currentContent: content,
+          lang,
+        }),
+      });
+      const data = await res.json();
+      if (data.content && !data.content.startsWith("Error")) {
+        setContent(data.content);
+        saveContent(data.content);
+      }
+    } catch {
+      console.error("Translation failed");
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   // Distribute photos across paragraphs evenly
@@ -487,10 +538,25 @@ export default function ChapterEditorPage() {
         </div>
       )}
 
+      {/* Language mismatch banner */}
+      {showTranslateBanner && !isTranslating && (
+        <div className="mx-6 mb-3 px-4 py-3 bg-fumi-accent/5 border border-fumi-accent/20 rounded-[12px] flex items-center justify-between gap-3">
+          <p className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-secondary m-0">
+            {ce.translateBanner}
+          </p>
+          <button
+            onClick={handleTranslate}
+            className="shrink-0 px-3.5 py-1.5 rounded-[20px] border-none bg-fumi-accent text-white font-[family-name:var(--font-dm-sans)] text-[11px] font-medium cursor-pointer"
+          >
+            {ce.translateButton}
+          </button>
+        </div>
+      )}
+
       {/* Chapter content */}
       <div className="mx-6 p-5 bg-white rounded-[14px] border border-fumi-border mb-3 relative">
-        {isRegenerating && (
-          <div className="absolute inset-0 bg-white/80 rounded-[14px] flex items-center justify-center z-10">
+        {(isRegenerating || isTranslating) && (
+          <div className="absolute inset-0 bg-white/80 rounded-[14px] flex flex-col items-center justify-center z-10 gap-2">
             <div className="flex gap-1.5">
               {[0, 1, 2].map((i) => (
                 <div
@@ -500,6 +566,11 @@ export default function ChapterEditorPage() {
                 />
               ))}
             </div>
+            {isTranslating && (
+              <p className="font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-accent m-0">
+                {ce.translating}
+              </p>
+            )}
           </div>
         )}
         {editing ? (
