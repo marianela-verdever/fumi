@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import html2canvas from "html2canvas";
 
 interface ShareCardModalProps {
@@ -30,6 +31,20 @@ export default function ShareCardModal({
   const cardRef = useRef<HTMLDivElement>(null);
   const [generating, setGenerating] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Mount check for portal (SSR safety)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
 
   // Trim excerpt to ~180 chars at word boundary
   const trimmed =
@@ -92,17 +107,20 @@ export default function ShareCardModal({
 
   const hasPhoto = !!selectedPhoto;
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60"
+      className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/60"
       onClick={onClose}
     >
       <div
-        className="bg-fumi-bg rounded-t-[16px] sm:rounded-[16px] mx-0 sm:mx-4 max-w-[380px] w-full flex flex-col max-h-[92vh]"
+        className="bg-fumi-bg rounded-t-[16px] sm:rounded-[16px] mx-0 sm:mx-4 max-w-[380px] w-full flex flex-col max-h-[85vh] sm:max-h-[92vh] mb-0 sm:mb-0"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto p-5 pb-3 flex flex-col gap-4">
+        <div
+          className="flex-1 overflow-y-auto p-5 pb-3 flex flex-col gap-4"
+          style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}
+        >
           <p className="font-[family-name:var(--font-dm-sans)] text-[14px] text-fumi-text font-medium m-0 text-center">
             {t.shareTitle}
           </p>
@@ -408,7 +426,7 @@ export default function ShareCardModal({
         </div>
 
         {/* Action buttons — pinned at bottom, never hidden */}
-        <div className="px-5 pb-5 pt-3 flex flex-col gap-2 border-t border-fumi-border/30 flex-shrink-0 safe-area-bottom">
+        <div className="px-5 pb-20 sm:pb-5 pt-3 flex flex-col gap-2 border-t border-fumi-border/30 flex-shrink-0 safe-area-bottom">
           <div className="flex gap-2">
             {canShare && (
               <button
@@ -438,4 +456,8 @@ export default function ShareCardModal({
       </div>
     </div>
   );
+
+  // Render via portal to escape AppShell stacking context
+  if (!mounted) return null;
+  return createPortal(modalContent, document.body);
 }
