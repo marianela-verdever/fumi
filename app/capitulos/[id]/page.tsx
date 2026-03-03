@@ -805,6 +805,9 @@ export default function ChapterEditorPage() {
             shareDownload: ce.shareDownload,
             shareShare: ce.shareShare,
             shareClose: ce.shareClose,
+            shareAddPhoto: ce.shareAddPhoto,
+            shareTapRemove: ce.shareTapRemove,
+            shareEditHint: ce.shareEditHint,
           }}
         />
       )}

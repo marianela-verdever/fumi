@@ -16,7 +16,33 @@ interface ShareCardModalProps {
     shareDownload: string;
     shareShare: string;
     shareClose: string;
+    shareAddPhoto: string;
+    shareTapRemove: string;
+    shareEditHint: string;
   };
+}
+
+/** Trim text at the last sentence boundary before maxLen, or word boundary as fallback */
+function smartTrim(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+
+  const chunk = text.slice(0, maxLen);
+  // Find last sentence-ending punctuation
+  const lastSentence = Math.max(
+    chunk.lastIndexOf(". "),
+    chunk.lastIndexOf("! "),
+    chunk.lastIndexOf("? "),
+    chunk.lastIndexOf(".\n"),
+    chunk.lastIndexOf(".\u00A0"), // non-breaking space
+  );
+
+  if (lastSentence > maxLen * 0.4) {
+    // Found a sentence boundary in the second half — use it
+    return text.slice(0, lastSentence + 1);
+  }
+
+  // Fallback: trim at last word boundary
+  return chunk.replace(/\s+\S*$/, "") + "…";
 }
 
 export default function ShareCardModal({
@@ -32,6 +58,8 @@ export default function ShareCardModal({
   const [generating, setGenerating] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [editingText, setEditingText] = useState(false);
+  const [customText, setCustomText] = useState(() => smartTrim(excerpt, 180));
 
   // Mount check for portal (SSR safety)
   useEffect(() => {
@@ -46,18 +74,17 @@ export default function ShareCardModal({
     };
   }, []);
 
-  // Trim excerpt to ~180 chars at word boundary
-  const trimmed =
-    excerpt.length > 180
-      ? excerpt.slice(0, 180).replace(/\s+\S*$/, "") + "…"
-      : excerpt;
+  // The display text (what shows on the card)
+  const displayText = customText || smartTrim(excerpt, 180);
 
   const generateImage = useCallback(async (): Promise<Blob | null> => {
     if (!cardRef.current) return null;
     setGenerating(true);
     try {
+      // Use lower scale on mobile to avoid memory issues
+      const isMobile = window.innerWidth < 640;
       const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
+        scale: isMobile ? 1.5 : 2,
         backgroundColor: null,
         useCORS: true,
         logging: false,
@@ -65,6 +92,8 @@ export default function ShareCardModal({
       return new Promise((resolve) => {
         canvas.toBlob((blob) => resolve(blob), "image/png", 1.0);
       });
+    } catch {
+      return null;
     } finally {
       setGenerating(false);
     }
@@ -77,29 +106,52 @@ export default function ShareCardModal({
     const a = document.createElement("a");
     a.href = url;
     a.download = `fumi-${babyName.toLowerCase()}-${monthLabel.toLowerCase().replace(/\s/g, "-")}.png`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
   const handleShare = async () => {
     const blob = await generateImage();
-    if (!blob) return;
+    if (!blob) {
+      // Fallback if image generation fails
+      handleDownload();
+      return;
+    }
     const file = new File([blob], `fumi-${babyName.toLowerCase()}.png`, {
       type: "image/png",
     });
 
-    if (navigator.share && navigator.canShare?.({ files: [file] })) {
-      try {
+    // Try sharing with file
+    try {
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           files: [file],
           title: `fumi. — ${babyName}`,
         });
-      } catch {
-        // user cancelled share
+        return;
       }
-    } else {
-      handleDownload();
+    } catch (err: unknown) {
+      // AbortError = user cancelled — that's fine
+      if (err instanceof Error && err.name === "AbortError") return;
     }
+
+    // Fallback: try sharing without file (just text)
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `fumi. — ${babyName}`,
+          text: displayText,
+        });
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    // Final fallback: download
+    handleDownload();
   };
 
   const canShare =
@@ -325,7 +377,7 @@ export default function ShareCardModal({
                       maxWidth: "880px",
                     }}
                   >
-                    {trimmed}
+                    {displayText}
                   </p>
 
                   {/* Divider */}
@@ -394,11 +446,45 @@ export default function ShareCardModal({
           </div>
         </div>
 
+          {/* Editable excerpt */}
+          {editingText ? (
+            <div className="px-4">
+              <textarea
+                value={customText}
+                onChange={(e) => {
+                  // Cap at 200 chars to fit the card
+                  if (e.target.value.length <= 200) setCustomText(e.target.value);
+                }}
+                rows={3}
+                className="w-full bg-white border border-fumi-border rounded-[10px] px-3 py-2.5 font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text outline-none focus:border-fumi-accent transition-colors resize-none"
+                autoFocus
+              />
+              <div className="flex justify-between items-center mt-1 mb-2">
+                <span className="font-[family-name:var(--font-dm-sans)] text-[10px] text-fumi-text-muted">
+                  {customText.length}/200
+                </span>
+                <button
+                  onClick={() => setEditingText(false)}
+                  className="font-[family-name:var(--font-dm-sans)] text-[11px] text-fumi-accent bg-transparent border-none cursor-pointer"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setEditingText(true)}
+              className="mx-4 mb-1 py-2 bg-transparent border border-dashed border-fumi-border rounded-[10px] font-[family-name:var(--font-dm-sans)] text-[11px] text-fumi-text-muted cursor-pointer hover:border-fumi-accent/40 transition-colors"
+            >
+              {t.shareEditHint} ✎
+            </button>
+          )}
+
           {/* Photo picker (if photos available) */}
           {photos.length > 0 && (
             <div>
               <p className="font-[family-name:var(--font-dm-sans)] text-[11px] uppercase tracking-[0.1em] text-fumi-text-muted m-0 mb-2 text-center">
-                {selectedPhoto ? "Tap to remove photo" : "Add a photo (optional)"}
+                {selectedPhoto ? t.shareTapRemove : t.shareAddPhoto}
               </p>
               <div className="flex gap-2 overflow-x-auto pb-1 justify-center">
                 {photos.slice(0, 6).map((url, i) => (
@@ -434,7 +520,7 @@ export default function ShareCardModal({
                 disabled={generating}
                 className="flex-1 py-3 rounded-[12px] border-none bg-fumi-accent text-white font-[family-name:var(--font-dm-sans)] text-[13px] font-medium cursor-pointer disabled:opacity-50 transition-opacity"
               >
-                {t.shareShare}
+                {generating ? "..." : t.shareShare}
               </button>
             )}
             <button
@@ -442,7 +528,7 @@ export default function ShareCardModal({
               disabled={generating}
               className={`${canShare ? "flex-1" : "w-full"} py-3 rounded-[12px] border border-fumi-border bg-transparent font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary cursor-pointer disabled:opacity-50 transition-opacity`}
             >
-              {t.shareDownload}
+              {generating ? "..." : t.shareDownload}
             </button>
           </div>
 
