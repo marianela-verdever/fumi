@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { getChatLimiter } from "@/lib/rate-limit";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -42,6 +43,17 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ reply: "Unauthorized" }, { status: 401 });
+    }
+
+    const limiter = getChatLimiter();
+    if (limiter) {
+      const { success } = await limiter.limit(user.id);
+      if (!success) {
+        return NextResponse.json(
+          { reply: "Too many requests. Please wait a moment." },
+          { status: 429 }
+        );
+      }
     }
 
     const { message, history, babyName, lang } = (await req.json()) as {
