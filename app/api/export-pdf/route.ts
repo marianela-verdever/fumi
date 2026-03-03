@@ -31,6 +31,7 @@ interface ChapterData {
   voice: string;
   generatedContent: string;
   ownTextBlocks: OwnBlock[];
+  photoUrls?: string[];
 }
 
 interface ExportRequest {
@@ -107,17 +108,40 @@ export async function POST(req: NextRequest) {
     const lineW = 20;
     doc.line(W / 2 - lineW / 2, 135, W / 2 + lineW / 2, 135);
 
+    // ── Helper: add a new content page with bg + page number ──────
+    let pageNum = 1;
+    const addContentPage = () => {
+      doc.addPage("a5");
+      pageNum++;
+      doc.setFillColor(...C.bg);
+      doc.rect(0, 0, W, H, "F");
+      // Page number
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...C.textMuted);
+      doc.text(String(pageNum), W / 2, H - 10, { align: "center" });
+      return margin + 5;
+    };
+
+    // ── Helper: fetch image as base64 data URL ──────────────────
+    const fetchImageBase64 = async (url: string): Promise<string | null> => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const buffer = await res.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString("base64");
+        const contentType = res.headers.get("content-type") || "image/jpeg";
+        return `data:${contentType};base64,${base64}`;
+      } catch {
+        return null;
+      }
+    };
+
     // ── Chapter pages ───────────────────────────────────────────────
     const monthLabel = lang === "en" ? "Month" : "Mes";
 
     for (const ch of exportable) {
-      doc.addPage("a5");
-
-      // Page background
-      doc.setFillColor(...C.bg);
-      doc.rect(0, 0, W, H, "F");
-
-      let y = margin + 5;
+      let y = addContentPage();
 
       // Chapter title
       doc.setFont("times", "bold");
@@ -144,11 +168,23 @@ export async function POST(req: NextRequest) {
 
       y += 6;
 
-      // Content paragraphs interleaved with own blocks
+      // Content paragraphs interleaved with own blocks and photos
       const paragraphs = ch.generatedContent
         .split("\n\n")
         .filter((p) => p.trim());
       const blocks = (ch.ownTextBlocks ?? []) as OwnBlock[];
+      const photos = ch.photoUrls ?? [];
+
+      // Distribute photos across paragraphs
+      const photoMap: Record<number, string[]> = {};
+      if (photos.length > 0 && paragraphs.length > 0) {
+        const interval = Math.max(1, Math.floor(paragraphs.length / Math.min(photos.length, paragraphs.length)));
+        photos.forEach((url, i) => {
+          const afterIdx = Math.min(interval * i + (interval - 1), paragraphs.length - 1);
+          if (!photoMap[afterIdx]) photoMap[afterIdx] = [];
+          photoMap[afterIdx].push(url);
+        });
+      }
 
       doc.setFont("times", "normal");
       doc.setFontSize(10.5);
@@ -161,10 +197,7 @@ export async function POST(req: NextRequest) {
         // Check if we need a new page
         const neededSpace = lines.length * lineHeight + 6;
         if (y + neededSpace > H - margin) {
-          doc.addPage("a5");
-          doc.setFillColor(...C.bg);
-          doc.rect(0, 0, W, H, "F");
-          y = margin + 5;
+          y = addContentPage();
           doc.setFont("times", "normal");
           doc.setFontSize(10.5);
           doc.setTextColor(...C.text);
@@ -175,6 +208,30 @@ export async function POST(req: NextRequest) {
           y += lineHeight;
         }
         y += 4;
+
+        // Photos after this paragraph
+        const paragraphPhotos = photoMap[pi];
+        if (paragraphPhotos) {
+          for (const photoUrl of paragraphPhotos) {
+            const imgData = await fetchImageBase64(photoUrl);
+            if (imgData) {
+              const imgH = 50; // mm height
+              if (y + imgH + 4 > H - margin) {
+                y = addContentPage();
+              }
+              try {
+                doc.addImage(imgData, "JPEG", margin, y, contentWidth, imgH);
+                y += imgH + 6;
+              } catch {
+                // Skip if image can't be added
+              }
+              // Reset font after image
+              doc.setFont("times", "normal");
+              doc.setFontSize(10.5);
+              doc.setTextColor(...C.text);
+            }
+          }
+        }
 
         // Own blocks after this paragraph
         const blocksHere = blocks.filter((b) => b.afterParagraph === pi);
@@ -187,10 +244,7 @@ export async function POST(req: NextRequest) {
           const blockHeight = blockLines.length * lineHeight + 8;
 
           if (y + blockHeight > H - margin) {
-            doc.addPage("a5");
-            doc.setFillColor(...C.bg);
-            doc.rect(0, 0, W, H, "F");
-            y = margin + 5;
+            y = addContentPage();
           }
 
           doc.line(margin, y - 2, margin, y + blockHeight - 6);
@@ -223,7 +277,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Footer
+      // Chapter footer
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(...C.textMuted);

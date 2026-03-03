@@ -14,6 +14,7 @@ export default function LibroPage() {
   const [format, setFormat] = useState<"narrative" | "comic">("narrative");
   const [baby, setBaby] = useState<Baby | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [chapterPhotos, setChapterPhotos] = useState<Record<string, string[]>>({});
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
 
@@ -28,8 +29,34 @@ export default function LibroPage() {
       .select("*")
       .eq("baby_id", babyObj.id)
       .order("month")
-      .then(({ data, error }) => {
-        if (!error && data) setChapters(data.map(rowToChapter));
+      .then(async ({ data, error }) => {
+        if (!error && data) {
+          const mapped = data.map(rowToChapter);
+          setChapters(mapped);
+
+          // Fetch entry photos for each chapter
+          const allEntryIds = mapped.flatMap((ch) => ch.entryIds);
+          if (allEntryIds.length > 0) {
+            const { data: entriesData } = await supabase
+              .from("entries")
+              .select("id, media_urls")
+              .in("id", allEntryIds);
+
+            if (entriesData) {
+              const mediaByEntry: Record<string, string[]> = {};
+              entriesData.forEach((e: { id: string; media_urls: string[] | null }) => {
+                if (e.media_urls?.length) mediaByEntry[e.id] = e.media_urls;
+              });
+
+              const photos: Record<string, string[]> = {};
+              mapped.forEach((ch) => {
+                const urls = ch.entryIds.flatMap((eid) => mediaByEntry[eid] ?? []);
+                if (urls.length > 0) photos[ch.id] = urls;
+              });
+              setChapterPhotos(photos);
+            }
+          }
+        }
       });
   }, []);
 
@@ -58,6 +85,7 @@ export default function LibroPage() {
             voice: ch.voice,
             generatedContent: ch.generatedContent,
             ownTextBlocks: ch.ownTextBlocks,
+            photoUrls: chapterPhotos[ch.id] ?? [],
           })),
           lang,
         }),
