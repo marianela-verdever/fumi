@@ -81,6 +81,7 @@ export default function ChapterEditorPage() {
   const [approved, setApproved] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [actionError, setActionError] = useState("");
   const [showShareModal, setShowShareModal] = useState(false);
   const [entryPhotos, setEntryPhotos] = useState<string[]>([]);
 
@@ -192,6 +193,7 @@ export default function ChapterEditorPage() {
   const handleRegenerate = async () => {
     if (!regenInstruction.trim()) return;
     setIsRegenerating(true);
+    setActionError("");
 
     try {
       const res = await fetch("/api/chapters/generate", {
@@ -207,11 +209,21 @@ export default function ChapterEditorPage() {
           lang,
         }),
       });
+
+      if (!res.ok) {
+        setActionError(lang === "es" ? "Error al regenerar. Intentá de nuevo." : "Regeneration failed. Try again.");
+        return;
+      }
+
       const data = await res.json();
-      setContent(data.content);
-      saveContent(data.content);
+      if (data.content && data.content.length > 50) {
+        setContent(data.content);
+        saveContent(data.content);
+      } else {
+        setActionError(lang === "es" ? "Error al regenerar. Intentá de nuevo." : "Regeneration failed. Try again.");
+      }
     } catch {
-      console.error("Regeneration failed");
+      setActionError(lang === "es" ? "Error al regenerar. Intentá de nuevo." : "Regeneration failed. Try again.");
     } finally {
       setIsRegenerating(false);
       setRegenInstruction("");
@@ -300,6 +312,7 @@ export default function ChapterEditorPage() {
 
   const handleTranslate = async () => {
     setIsTranslating(true);
+    setActionError("");
     const instruction = lang === "en"
       ? `Translate this entire chapter to English. Keep the same literary tone, voice, and style. Do not add or remove content — just translate accurately.`
       : `Traducí este capítulo completo a español. Mantené el mismo tono literario, voz y estilo. No agregues ni elimines contenido — solo traducí fielmente. Usa español neutro con "tú".`;
@@ -318,13 +331,21 @@ export default function ChapterEditorPage() {
           lang,
         }),
       });
+
+      if (!res.ok) {
+        setActionError(lang === "es" ? "Error al traducir. Intentá de nuevo." : "Translation failed. Try again.");
+        return;
+      }
+
       const data = await res.json();
-      if (data.content && !data.content.startsWith("Error")) {
+      if (data.content && data.content.length > 50) {
         setContent(data.content);
         saveContent(data.content);
+      } else {
+        setActionError(lang === "es" ? "Error al traducir. Intentá de nuevo." : "Translation failed. Try again.");
       }
     } catch {
-      console.error("Translation failed");
+      setActionError(lang === "es" ? "Error al traducir. Intentá de nuevo." : "Translation failed. Try again.");
     } finally {
       setIsTranslating(false);
     }
@@ -549,6 +570,21 @@ export default function ChapterEditorPage() {
             className="shrink-0 px-3.5 py-1.5 rounded-[20px] border-none bg-fumi-accent text-white font-[family-name:var(--font-dm-sans)] text-[11px] font-medium cursor-pointer"
           >
             {ce.translateButton}
+          </button>
+        </div>
+      )}
+
+      {/* Error message */}
+      {actionError && (
+        <div className="mx-6 mb-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-[10px] flex items-center justify-between">
+          <p className="font-[family-name:var(--font-dm-sans)] text-[12px] text-red-500 m-0">
+            {actionError}
+          </p>
+          <button
+            onClick={() => setActionError("")}
+            className="text-red-400 bg-transparent border-none cursor-pointer text-[14px] p-0 ml-2"
+          >
+            ×
           </button>
         </div>
       )}
