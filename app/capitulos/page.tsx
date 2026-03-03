@@ -291,7 +291,9 @@ export default function CapitulosPage() {
               return (
                 <details key={year} open={isCurrentYear} className="group">
                   <summary className="flex items-center gap-2 cursor-pointer list-none py-2 mb-1 [&::-webkit-details-marker]:hidden">
-                    <span className="text-[11px] text-fumi-text-muted transition-transform group-open:rotate-90">▶</span>
+                    <svg className="w-3 h-3 text-fumi-text-muted transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4.5 2.5L8 6L4.5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                     <span className="font-[family-name:var(--font-playfair)] text-[14px] text-fumi-text font-medium">
                       {t.chapters.yearPrefix} {year}
                     </span>

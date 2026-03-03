@@ -119,6 +119,7 @@ export const strings = {
       resendCode: "Send a new code",
       wrongCode: "Invalid code. Try again.",
       rateLimited: "Too many attempts. Wait a few minutes.",
+      invalidEmail: "Please enter a valid email address.",
     },
     settings: {
       title: "Settings",
@@ -290,6 +291,7 @@ export const strings = {
       resendCode: "Enviar nuevo código",
       wrongCode: "Código incorrecto. Intentá de nuevo.",
       rateLimited: "Demasiados intentos. Esperá unos minutos.",
+      invalidEmail: "Ingresá un email válido.",
     },
     settings: {
       title: "Ajustes",

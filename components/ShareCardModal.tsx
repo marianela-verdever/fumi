@@ -94,28 +94,30 @@ export default function ShareCardModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60"
       onClick={onClose}
     >
       <div
-        className="bg-fumi-bg rounded-[16px] mx-4 max-w-[380px] w-full p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
+        className="bg-fumi-bg rounded-t-[16px] sm:rounded-[16px] mx-0 sm:mx-4 max-w-[380px] w-full flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="font-[family-name:var(--font-dm-sans)] text-[14px] text-fumi-text font-medium m-0 text-center">
-          {t.shareTitle}
-        </p>
+        {/* Scrollable content area */}
+        <div className="flex-1 overflow-y-auto p-5 pb-3 flex flex-col gap-4">
+          <p className="font-[family-name:var(--font-dm-sans)] text-[14px] text-fumi-text font-medium m-0 text-center">
+            {t.shareTitle}
+          </p>
 
-        {/* Card preview (scaled down for display) */}
-        <div className="flex justify-center">
-          <div className="w-[270px] h-[480px] overflow-hidden rounded-[12px] shadow-lg">
-            <div
-              style={{
-                transform: "scale(0.25)",
-                transformOrigin: "top left",
-                width: "1080px",
-                height: "1920px",
-              }}
-            >
+          {/* Card preview (scaled down for display) */}
+          <div className="flex justify-center">
+            <div className="w-[220px] h-[391px] overflow-hidden rounded-[12px] shadow-lg flex-shrink-0">
+              <div
+                style={{
+                  transform: "scale(0.2037)",
+                  transformOrigin: "top left",
+                  width: "1080px",
+                  height: "1920px",
+                }}
+              >
               {/* The actual card at 1080x1920 */}
               <div
                 ref={cardRef}
@@ -374,62 +376,65 @@ export default function ShareCardModal({
           </div>
         </div>
 
-        {/* Photo picker (if photos available) */}
-        {photos.length > 0 && (
-          <div>
-            <p className="font-[family-name:var(--font-dm-sans)] text-[11px] uppercase tracking-[0.1em] text-fumi-text-muted m-0 mb-2 text-center">
-              {selectedPhoto ? "Tap to remove photo" : "Add a photo (optional)"}
-            </p>
-            <div className="flex gap-2 overflow-x-auto pb-1 justify-center">
-              {photos.slice(0, 6).map((url, i) => (
-                <button
-                  key={i}
-                  onClick={() =>
-                    setSelectedPhoto(selectedPhoto === url ? null : url)
-                  }
-                  className={`flex-shrink-0 w-[52px] h-[52px] rounded-[10px] overflow-hidden border-2 cursor-pointer p-0 transition-all ${
-                    selectedPhoto === url
-                      ? "border-fumi-accent scale-105"
-                      : "border-fumi-border opacity-70 hover:opacity-100"
-                  }`}
-                >
-                  <img
-                    src={url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
+          {/* Photo picker (if photos available) */}
+          {photos.length > 0 && (
+            <div>
+              <p className="font-[family-name:var(--font-dm-sans)] text-[11px] uppercase tracking-[0.1em] text-fumi-text-muted m-0 mb-2 text-center">
+                {selectedPhoto ? "Tap to remove photo" : "Add a photo (optional)"}
+              </p>
+              <div className="flex gap-2 overflow-x-auto pb-1 justify-center">
+                {photos.slice(0, 6).map((url, i) => (
+                  <button
+                    key={i}
+                    onClick={() =>
+                      setSelectedPhoto(selectedPhoto === url ? null : url)
+                    }
+                    className={`flex-shrink-0 w-[52px] h-[52px] rounded-[10px] overflow-hidden border-2 cursor-pointer p-0 transition-all ${
+                      selectedPhoto === url
+                        ? "border-fumi-accent scale-105"
+                        : "border-fumi-border opacity-70 hover:opacity-100"
+                    }`}
+                  >
+                    <img
+                      src={url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Action buttons */}
-        <div className="flex gap-2">
-          {canShare && (
-            <button
-              onClick={handleShare}
-              disabled={generating}
-              className="flex-1 py-3 rounded-[12px] border-none bg-fumi-accent text-white font-[family-name:var(--font-dm-sans)] text-[13px] font-medium cursor-pointer disabled:opacity-50 transition-opacity"
-            >
-              {t.shareShare}
-            </button>
           )}
-          <button
-            onClick={handleDownload}
-            disabled={generating}
-            className={`${canShare ? "flex-1" : "w-full"} py-3 rounded-[12px] border border-fumi-border bg-transparent font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary cursor-pointer disabled:opacity-50 transition-opacity`}
-          >
-            {t.shareDownload}
-          </button>
         </div>
 
-        <button
-          onClick={onClose}
-          className="py-2 bg-transparent border-none font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-muted cursor-pointer"
-        >
-          {t.shareClose}
-        </button>
+        {/* Action buttons — pinned at bottom, never hidden */}
+        <div className="px-5 pb-5 pt-3 flex flex-col gap-2 border-t border-fumi-border/30 flex-shrink-0 safe-area-bottom">
+          <div className="flex gap-2">
+            {canShare && (
+              <button
+                onClick={handleShare}
+                disabled={generating}
+                className="flex-1 py-3 rounded-[12px] border-none bg-fumi-accent text-white font-[family-name:var(--font-dm-sans)] text-[13px] font-medium cursor-pointer disabled:opacity-50 transition-opacity"
+              >
+                {t.shareShare}
+              </button>
+            )}
+            <button
+              onClick={handleDownload}
+              disabled={generating}
+              className={`${canShare ? "flex-1" : "w-full"} py-3 rounded-[12px] border border-fumi-border bg-transparent font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary cursor-pointer disabled:opacity-50 transition-opacity`}
+            >
+              {t.shareDownload}
+            </button>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="py-2 bg-transparent border-none font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text-muted cursor-pointer"
+          >
+            {t.shareClose}
+          </button>
+        </div>
       </div>
     </div>
   );

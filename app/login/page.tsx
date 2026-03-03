@@ -32,9 +32,24 @@ export default function LoginPage() {
     }, 1000);
   };
 
+  // Basic email format validation
+  const isValidEmail = (value: string): boolean => {
+    const trimmed = value.trim();
+    // Must have exactly one @, a domain with a dot, and reasonable lengths
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    return re.test(trimmed) && trimmed.length >= 6;
+  };
+
   const handleSendCode = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!email.trim() || cooldown > 0) return;
+
+    // Validate email format before calling Supabase
+    if (!isValidEmail(email)) {
+      setError(t.login.invalidEmail);
+      return;
+    }
+
     setLoading(true);
     setError("");
 
