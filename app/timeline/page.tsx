@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
+import WelcomeTour from "@/components/WelcomeTour";
 import type { Baby, Entry } from "@/lib/types";
 import { calculateAge, formatDate } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
@@ -258,14 +259,33 @@ function TimelineSkeleton() {
 }
 
 function EmptyTimeline() {
-  const { lang } = useLang();
+  const router = useRouter();
+  const { t } = useLang();
   return (
-    <div className="px-6 pb-24 flex flex-col items-center justify-center py-16">
-      <p className="font-[family-name:var(--font-playfair)] text-[18px] text-fumi-text-muted text-center italic leading-[1.6]">
-        {lang === "en"
-          ? "No moments yet. Add your first one."
-          : "Aún no hay momentos. Agregá el primero."}
+    <div className="px-6 pb-24 flex flex-col items-center justify-center py-12">
+      {/* Decorative icon */}
+      <div
+        className="w-[80px] h-[80px] rounded-full flex items-center justify-center mb-5"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(196,112,63,0.1) 0%, transparent 70%)",
+        }}
+      >
+        <span className="text-[32px] text-fumi-accent/60">✦</span>
+      </div>
+
+      <h3 className="font-[family-name:var(--font-playfair)] text-[20px] font-medium text-fumi-text text-center m-0 mb-2">
+        {t.emptyTimeline.title}
+      </h3>
+      <p className="font-[family-name:var(--font-dm-sans)] text-[14px] text-fumi-text-secondary text-center leading-relaxed m-0 mb-6 max-w-[280px]">
+        {t.emptyTimeline.desc}
       </p>
+      <button
+        onClick={() => router.push("/agregar")}
+        className="px-6 py-3 rounded-[12px] border-none bg-fumi-accent text-white font-[family-name:var(--font-dm-sans)] text-[14px] font-medium cursor-pointer transition-all hover:opacity-90 active:scale-[0.98]"
+      >
+        {t.emptyTimeline.button}
+      </button>
     </div>
   );
 }
@@ -277,6 +297,7 @@ export default function TimelinePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [modalImages, setModalImages] = useState<{ urls: string[]; index: number } | null>(null);
   const [showNudge, setShowNudge] = useState(false);
+  const [showTour, setShowTour] = useState(false);
   const router = useRouter();
   const { t, lang } = useLang();
 
@@ -288,6 +309,11 @@ export default function TimelinePage() {
     }
     const babyObj: Baby = JSON.parse(stored);
     setBaby(babyObj);
+
+    // Show tour if not yet completed
+    if (!localStorage.getItem("fumi_tour_done")) {
+      setShowTour(true);
+    }
 
     // Fetch entries
     supabase
@@ -374,6 +400,19 @@ export default function TimelinePage() {
           urls={modalImages.urls}
           initialIndex={modalImages.index}
           onClose={() => setModalImages(null)}
+        />
+      )}
+
+      {showTour && baby && (
+        <WelcomeTour
+          babyName={baby.name}
+          onComplete={() => {
+            setShowTour(false);
+            // If no entries yet, guide to add page
+            if (entries.length === 0) {
+              router.push("/agregar?first=1");
+            }
+          }}
         />
       )}
     </AppShell>

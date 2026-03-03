@@ -19,6 +19,7 @@ type AudioState = "idle" | "recording" | "transcribing" | "done";
 export default function AgregarPage() {
   const router = useRouter();
   const { t, lang } = useLang();
+  const [showHint, setShowHint] = useState(false);
   const [date, setDate] = useState(getTodayISO());
   const [text, setText] = useState("");
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
@@ -30,6 +31,13 @@ export default function AgregarPage() {
   const [saveError, setSaveError] = useState("");
   const [placeholder, setPlaceholder] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Check if this is the first moment (coming from onboarding tour)
+    if (typeof window !== "undefined" && window.location.search.includes("first=1")) {
+      setShowHint(true);
+    }
+  }, []);
 
   useEffect(() => {
     const pool = lang === "en" ? placeholdersEN : placeholders;
@@ -161,6 +169,25 @@ export default function AgregarPage() {
   return (
     <AppShell>
       <Header title={t.add.title} subtitle={t.add.subtitle} />
+
+      {/* First moment hint banner */}
+      {showHint && (
+        <div
+          className="mx-6 mt-2 px-4 py-3.5 bg-fumi-accent/8 border border-fumi-accent/20 rounded-[12px] flex items-start gap-3"
+          style={{ animation: "slide-up 0.4s ease-out" }}
+        >
+          <span className="text-[16px] mt-0.5 text-fumi-accent">✦</span>
+          <p className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text m-0 leading-[1.5] flex-1">
+            {t.firstMomentHint}
+          </p>
+          <button
+            onClick={() => setShowHint(false)}
+            className="text-fumi-text-muted/50 bg-transparent border-none cursor-pointer text-[14px] p-0 shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="px-6 pt-4 flex flex-col gap-4">
         {/* Date picker — works on both desktop (showPicker) and mobile (tap on input) */}

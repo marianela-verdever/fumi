@@ -144,6 +144,33 @@ export const strings = {
       entriesSuffix: "entries",
       exportButton: "Export book ◻",
     },
+    tour: {
+      skip: "Skip",
+      next: "Next",
+      done: "Start adding moments",
+      screen1Title: "Capture moments",
+      screen1Desc: "Photos, texts, audios — everything that makes their story unique.",
+      screen2Title: "AI writes the chapters",
+      screen2Desc: "fumi transforms your moments into a beautiful narrative for each month.",
+      screen3Title: "Create their book",
+      screen3Desc: "When you're ready, export a beautiful book to keep forever.",
+    },
+    emptyTimeline: {
+      title: "Their story starts here",
+      desc: "Add your first moment — a photo, a note, a voice memo.",
+      button: "Add first moment",
+    },
+    emptyChapters: {
+      title: "Chapters will appear here",
+      desc: "Add moments to your timeline first. fumi will turn them into monthly chapters.",
+      button: "Add a moment",
+    },
+    emptyBook: {
+      title: "Your book starts here",
+      desc: "Create chapters from your moments, then export them as a beautiful book.",
+      button: "Go to chapters",
+    },
+    firstMomentHint: "This is your first moment — tell us anything about your baby today.",
   },
   es: {
     nav: {
@@ -288,6 +315,33 @@ export const strings = {
       entriesSuffix: "entradas",
       exportButton: "Exportar libro ◻",
     },
+    tour: {
+      skip: "Saltar",
+      next: "Siguiente",
+      done: "Empezar a agregar momentos",
+      screen1Title: "Capturá momentos",
+      screen1Desc: "Fotos, textos, audios — todo lo que hace única su historia.",
+      screen2Title: "La IA escribe los capítulos",
+      screen2Desc: "fumi transforma tus momentos en una narrativa hermosa para cada mes.",
+      screen3Title: "Creá su libro",
+      screen3Desc: "Cuando estés lista, exportá un libro hermoso para guardar para siempre.",
+    },
+    emptyTimeline: {
+      title: "Su historia empieza acá",
+      desc: "Agregá tu primer momento — una foto, una nota, un audio.",
+      button: "Agregar primer momento",
+    },
+    emptyChapters: {
+      title: "Los capítulos van a aparecer acá",
+      desc: "Agregá momentos a tu timeline primero. fumi los va a convertir en capítulos mensuales.",
+      button: "Agregar un momento",
+    },
+    emptyBook: {
+      title: "Tu libro empieza acá",
+      desc: "Creá capítulos a partir de tus momentos y después exportalos como un libro hermoso.",
+      button: "Ir a capítulos",
+    },
+    firstMomentHint: "Este es tu primer momento — contanos cualquier cosa sobre tu bebé hoy.",
   },
 } satisfies Record<Lang, object>;
 

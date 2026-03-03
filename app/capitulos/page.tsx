@@ -159,9 +159,29 @@ export default function CapitulosPage() {
             </div>
           ))
         ) : totalMonths === 0 ? (
-          <p className="font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-muted text-center py-8">
-            {t.chapters.statusCollecting}…
-          </p>
+          <div className="flex flex-col items-center justify-center py-12">
+            <div
+              className="w-[80px] h-[80px] rounded-full flex items-center justify-center mb-5"
+              style={{
+                background:
+                  "radial-gradient(circle, rgba(196,112,63,0.1) 0%, transparent 70%)",
+              }}
+            >
+              <span className="text-[32px] text-fumi-accent/60">◬</span>
+            </div>
+            <h3 className="font-[family-name:var(--font-playfair)] text-[20px] font-medium text-fumi-text text-center m-0 mb-2">
+              {t.emptyChapters.title}
+            </h3>
+            <p className="font-[family-name:var(--font-dm-sans)] text-[14px] text-fumi-text-secondary text-center leading-relaxed m-0 mb-6 max-w-[280px]">
+              {t.emptyChapters.desc}
+            </p>
+            <button
+              onClick={() => router.push("/agregar")}
+              className="px-6 py-3 rounded-[12px] border-none bg-fumi-accent text-white font-[family-name:var(--font-dm-sans)] text-[14px] font-medium cursor-pointer transition-all hover:opacity-90 active:scale-[0.98]"
+            >
+              {t.emptyChapters.button}
+            </button>
+          </div>
         ) : (
           (() => {
             const totalYears = Math.ceil(totalMonths / 12);
