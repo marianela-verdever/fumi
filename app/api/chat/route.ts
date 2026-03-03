@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { createSupabaseServer } from "@/lib/supabase/server";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -37,6 +38,12 @@ The baby's name is {babyName}.`,
 /* ------------------------------------------------------------------ */
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createSupabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ reply: "Unauthorized" }, { status: 401 });
+    }
+
     const { message, history, babyName, lang } = (await req.json()) as {
       message: string;
       history: Array<{ role: "ai" | "user"; text: string }>;
