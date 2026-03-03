@@ -81,6 +81,7 @@ export default function ChapterEditorPage() {
   const [approved, setApproved] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [entryPhotos, setEntryPhotos] = useState<string[]>([]);
 
   // Load chapter from Supabase
   useEffect(() => {
@@ -95,7 +96,7 @@ export default function ChapterEditorPage() {
       .select("*")
       .eq("id", chapterId)
       .single()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error || !data) {
           setNotFound(true);
         } else {
@@ -105,6 +106,20 @@ export default function ChapterEditorPage() {
           setContent(ch.generatedContent);
           setOwnBlocks((ch.ownTextBlocks ?? []) as unknown as OwnBlock[]);
           setApproved(ch.status === "approved");
+
+          // Fetch photos from linked entries
+          if (ch.entryIds.length > 0) {
+            const { data: entries } = await supabase
+              .from("entries")
+              .select("media_urls")
+              .in("id", ch.entryIds);
+            if (entries) {
+              const photos = entries
+                .flatMap((e: { media_urls: string[] | null }) => e.media_urls ?? [])
+                .filter((url: string) => url);
+              setEntryPhotos(photos);
+            }
+          }
         }
         setIsLoading(false);
       });
@@ -264,6 +279,17 @@ export default function ChapterEditorPage() {
     saveOwnBlocks(updated);
   };
 
+  // Distribute photos across paragraphs evenly
+  const photosByParagraph: Record<number, string[]> = {};
+  if (entryPhotos.length > 0 && paragraphs.length > 0) {
+    const interval = Math.max(1, Math.floor(paragraphs.length / Math.min(entryPhotos.length, paragraphs.length)));
+    entryPhotos.forEach((url, i) => {
+      const afterIdx = Math.min(interval * i + (interval - 1), paragraphs.length - 1);
+      if (!photosByParagraph[afterIdx]) photosByParagraph[afterIdx] = [];
+      photosByParagraph[afterIdx].push(url);
+    });
+  }
+
   const renderChapterContent = () => {
     const elements: React.ReactNode[] = [];
 
@@ -278,6 +304,30 @@ export default function ChapterEditorPage() {
           {p}
         </p>
       );
+
+      {/* Entry photos after this paragraph */}
+      {const photos = photosByParagraph[i];
+      if (photos && photos.length > 0) {
+        elements.push(
+          <div
+            key={`photos-${i}`}
+            className={`mt-4 flex gap-2 overflow-x-auto ${photos.length === 1 ? "" : "pb-1"}`}
+          >
+            {photos.map((url, pi) => (
+              <img
+                key={`photo-${i}-${pi}`}
+                src={url}
+                alt=""
+                className={`rounded-[10px] object-cover ${
+                  photos.length === 1
+                    ? "w-full h-48"
+                    : "w-40 h-40 shrink-0"
+                }`}
+              />
+            ))}
+          </div>
+        );
+      }}
 
       const blocksHere = ownBlocks.filter((b) => b.afterParagraph === i);
       blocksHere.forEach((block) =>
