@@ -18,7 +18,9 @@ interface ShareCardModalProps {
     shareClose: string;
     shareAddPhoto: string;
     shareTapRemove: string;
-    shareEditHint: string;
+    shareSaveToPhotos: string;
+    shareCopyImage: string;
+    shareCopied: string;
   };
 }
 
@@ -56,8 +58,9 @@ export default function ShareCardModal({
   const cardRef = useRef<HTMLDivElement>(null);
   const [generating, setGenerating] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [showSaveOptions, setShowSaveOptions] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [customText, setCustomText] = useState(() => smartTrim(excerpt, 180));
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -66,7 +69,7 @@ export default function ShareCardModal({
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  const displayText = customText || smartTrim(excerpt, 180);
+  const displayText = smartTrim(excerpt, 180);
   const hasPhoto = !!selectedPhoto;
 
   /* ── Card content (rendered twice: preview + hidden capture) ── */
@@ -242,7 +245,7 @@ export default function ShareCardModal({
     }
   }, []);
 
-  /* ── Share handler (native share sheet) ── */
+  /* ── Share handler (native share sheet on mobile, clipboard on desktop) ── */
   const handleShare = async () => {
     const blob = await generateImage();
     if (!blob) return;
@@ -251,12 +254,13 @@ export default function ShareCardModal({
       type: "image/png",
     });
 
-    // Try native share with file
+    // Try native share with file + text (mobile)
     try {
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           files: [file],
           title: `fumi. — ${babyName}`,
+          text: displayText,
         });
         return;
       }
@@ -264,50 +268,68 @@ export default function ShareCardModal({
       if (err instanceof Error && err.name === "AbortError") return;
     }
 
-    // Fallback: try text-only share
+    // Fallback: copy image to clipboard (desktop)
     try {
-      if (navigator.share) {
-        await navigator.share({ title: `fumi. — ${babyName}`, text: displayText });
-        return;
-      }
-    } catch { /* ignore */ }
-
-    // Final fallback: open image in new tab
-    openImageInNewTab(blob);
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob }),
+      ]);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Last fallback: copy text
+      try {
+        await navigator.clipboard.writeText(displayText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch { /* ignore */ }
+    }
   };
 
-  /* ── Download handler (works on iOS + Android + Desktop) ── */
-  const handleDownload = async () => {
+  /* ── Save to photos/downloads ── */
+  const handleSaveToPhotos = async () => {
     const blob = await generateImage();
     if (!blob) return;
 
-    // On iOS Safari, a.download doesn't work — open image in new tab instead
+    const fileName = `fumi-${babyName.toLowerCase()}-${monthLabel.toLowerCase().replace(/\s/g, "-")}.png`;
+
+    // iOS: use native share sheet (user picks "Save Image")
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     if (isIOS) {
-      openImageInNewTab(blob);
-      return;
+      try {
+        const file = new File([blob], fileName, { type: "image/png" });
+        if (navigator.share && navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          return;
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") return;
+      }
     }
 
-    // Desktop + Android: standard download
+    // Android + Desktop (+ iOS fallback): standard download link
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `fumi-${babyName.toLowerCase()}-${monthLabel.toLowerCase().replace(/\s/g, "-")}.png`;
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
 
-  /** Open a blob image in a new tab (iOS fallback) */
-  const openImageInNewTab = (blob: Blob) => {
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank");
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-  };
+  /* ── Copy image to clipboard ── */
+  const handleCopyImage = async () => {
+    const blob = await generateImage();
+    if (!blob) return;
 
-  const canShare =
-    typeof navigator !== "undefined" && typeof navigator.share === "function";
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob }),
+      ]);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* ignore */ }
+  };
 
   const modalContent = (
     <div
@@ -341,21 +363,6 @@ export default function ShareCardModal({
             </div>
           </div>
 
-          {/* Editable excerpt — simple textarea like the photo picker */}
-          <div>
-            <p className="font-[family-name:var(--font-dm-sans)] text-[11px] uppercase tracking-[0.1em] text-fumi-text-muted m-0 mb-1.5 text-center">
-              {t.shareEditHint}
-            </p>
-            <textarea
-              value={customText}
-              onChange={(e) => {
-                if (e.target.value.length <= 200) setCustomText(e.target.value);
-              }}
-              rows={2}
-              className="w-full bg-white border border-fumi-border rounded-[10px] px-3 py-2 font-[family-name:var(--font-dm-sans)] text-[12px] text-fumi-text outline-none focus:border-fumi-accent transition-colors resize-none leading-relaxed"
-            />
-          </div>
-
           {/* Photo picker */}
           {photos.length > 0 && (
             <div>
@@ -385,24 +392,42 @@ export default function ShareCardModal({
 
         {/* Action buttons — pinned at bottom */}
         <div className="px-5 pb-20 sm:pb-5 pt-3 flex flex-col gap-2 border-t border-fumi-border/30 flex-shrink-0 safe-area-bottom">
-          <div className="flex gap-2">
-            {canShare && (
-              <button
-                onClick={handleShare}
-                disabled={generating}
-                className="flex-1 py-3 rounded-[12px] border-none bg-fumi-accent text-white font-[family-name:var(--font-dm-sans)] text-[13px] font-medium cursor-pointer disabled:opacity-50 transition-opacity"
-              >
-                {generating ? "..." : t.shareShare}
-              </button>
-            )}
+          {/* Share button */}
+          <button
+            onClick={handleShare}
+            disabled={generating}
+            className="w-full py-3 rounded-[12px] border-none bg-fumi-accent text-white font-[family-name:var(--font-dm-sans)] text-[13px] font-medium cursor-pointer disabled:opacity-50 transition-opacity"
+          >
+            {generating ? "..." : copied ? t.shareCopied : t.shareShare}
+          </button>
+
+          {/* Save button — toggles options */}
+          {!showSaveOptions ? (
             <button
-              onClick={handleDownload}
+              onClick={() => setShowSaveOptions(true)}
               disabled={generating}
-              className={`${canShare ? "flex-1" : "w-full"} py-3 rounded-[12px] border border-fumi-border bg-transparent font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary cursor-pointer disabled:opacity-50 transition-opacity`}
+              className="w-full py-3 rounded-[12px] border border-fumi-border bg-transparent font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary cursor-pointer disabled:opacity-50 transition-opacity"
             >
-              {generating ? "..." : t.shareDownload}
+              {t.shareDownload}
             </button>
-          </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={handleSaveToPhotos}
+                disabled={generating}
+                className="flex-1 py-3 rounded-[12px] border border-fumi-border bg-fumi-bg-warm font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary cursor-pointer disabled:opacity-50 transition-opacity"
+              >
+                {generating ? "..." : t.shareSaveToPhotos}
+              </button>
+              <button
+                onClick={handleCopyImage}
+                disabled={generating}
+                className="flex-1 py-3 rounded-[12px] border border-fumi-border bg-fumi-bg-warm font-[family-name:var(--font-dm-sans)] text-[13px] text-fumi-text-secondary cursor-pointer disabled:opacity-50 transition-opacity"
+              >
+                {generating ? "..." : copied ? t.shareCopied : t.shareCopyImage}
+              </button>
+            </div>
+          )}
 
           <button
             onClick={onClose}
