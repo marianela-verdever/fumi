@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /api/
+Disallow: /settings
+Disallow: /onboarding
+Allow: /login
+Allow: /

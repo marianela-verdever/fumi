@@ -127,13 +127,15 @@ export default function LoginPage() {
       </div>
 
       {step === "email" ? (
-        <form onSubmit={handleSendCode} className="flex flex-col gap-5">
+        <form onSubmit={handleSendCode} method="post" className="flex flex-col gap-5">
           <div>
             <label className="font-[family-name:var(--font-dm-sans)] text-[11px] uppercase tracking-[0.1em] text-fumi-text-muted block mb-2">
               Email
             </label>
             <input
               type="email"
+              name="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t.login.emailPlaceholder}

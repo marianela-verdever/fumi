@@ -12,6 +12,22 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=()",
   },
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' https://*.supabase.co blob: data:",
+      "font-src 'self'",
+      "connect-src 'self' https://*.supabase.co https://api.openai.com",
+      "frame-ancestors 'none'",
+    ].join("; "),
+  },
+  {
+    key: "Access-Control-Allow-Origin",
+    value: "https://fumi-baby-story-app.vercel.app",
+  },
 ];
 
 const nextConfig: NextConfig = {
